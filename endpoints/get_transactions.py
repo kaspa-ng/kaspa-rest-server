@@ -103,9 +103,10 @@ async def get_transaction(response: Response,
         tx_outputs = None
         tx_inputs = None
 
-        tx_blocks = await s.execute(select(BlockTransaction)
-                                    .filter(BlockTransaction.transaction_id == transactionId))
-        tx_blocks = tx_blocks.scalars().all()
+        block_hashes = (await s.execute(
+            select(BlockTransaction.block_hash)
+            .filter(BlockTransaction.transaction_id == transactionId)
+        )).scalars().all()
 
         if outputs:
             tx_outputs = await s.execute(select(TransactionOutput) \
@@ -152,7 +153,7 @@ async def get_transaction(response: Response,
             "transaction_id": tx.Transaction.transaction_id,
             "hash": tx.Transaction.hash,
             "mass": tx.Transaction.mass,
-            "block_hash": [x.block_hash for x in tx_blocks],
+            "block_hash": block_hashes,
             "block_time": tx.Transaction.block_time,
             "is_accepted": True if tx.accepting_block_hash else False,
             "accepting_block_hash": tx.accepting_block_hash,
