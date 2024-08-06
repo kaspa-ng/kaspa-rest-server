@@ -1,16 +1,14 @@
-import os
-
 from sqlalchemy import TypeDecorator
 from sqlalchemy.types import VARCHAR
+
+from constants import ADDRESS_PREFIX
 
 
 class AddressColumn(TypeDecorator):
     impl = VARCHAR
     cache_ok = True
 
-    prefix = "kaspa:"
-    if os.getenv('TESTNET') == 'true':
-        prefix = "kaspatest:"
+    prefix = ADDRESS_PREFIX + ":"
 
     def process_bind_param(self, value, dialect):
         if value is not None:
