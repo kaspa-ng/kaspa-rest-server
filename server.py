@@ -1,9 +1,10 @@
 # encoding: utf-8
 import logging
 import os
+from typing import Optional
 
 import fastapi.logger
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi_utils.tasks import repeat_every
@@ -11,10 +12,13 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from dbsession import async_session
 from helper.LimitUploadSize import LimitUploadSize
 from kaspad.KaspadMultiClient import KaspadMultiClient
 
 fastapi.logger.logger.setLevel(logging.WARNING)
+
+_logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Kaspa REST-API server",
@@ -42,10 +46,20 @@ app.add_middleware(
 )
 
 
+class KaspadStatus(BaseModel):
+    is_online: bool = False
+    server_version: Optional[str] = None
+    is_utxo_indexed: Optional[bool] = None
+    is_synced: Optional[bool] = None
+
+
+class DatabaseStatus(BaseModel):
+    is_online: bool = False
+
+
 class PingResponse(BaseModel):
-    serverVersion: str = "0.12.2"
-    isUtxoIndexed: bool = True
-    isSynced: bool = True
+    kaspad: KaspadStatus = KaspadStatus()
+    database: DatabaseStatus = DatabaseStatus()
 
 
 @app.get("/ping",
@@ -55,17 +69,32 @@ async def ping_server():
     """
     Ping Pong
     """
+    result = PingResponse()
+
+    error = False
     try:
         info = await kaspad_client.kaspads[0].request("getInfoRequest")
-        assert info["getInfoResponse"]["isSynced"] is True
+        result.kaspad.is_online = True
+        result.kaspad.server_version = info["getInfoResponse"]["serverVersion"]
+        result.kaspad.is_utxo_indexed = info["getInfoResponse"]["isUtxoIndexed"]
+        result.kaspad.is_synced = info["getInfoResponse"]["isSynced"]
+    except Exception as err:
+        _logger.error("Kaspad health check failed %s", err)
+        error = True
 
-        return {
-            "server_version": info["getInfoResponse"]["serverVersion"],
-            "is_utxo_indexed": info["getInfoResponse"]["isUtxoIndexed"],
-            "is_synced": info["getInfoResponse"]["isSynced"]
-        }
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail="Kaspad not connected.")
+    if os.getenv("SQL_URI") is not None:
+        async with async_session() as session:
+            try:
+                await session.execute("SELECT 1")
+                result.database.is_online = True
+            except Exception as err:
+                _logger.error("Database health check failed %s", err)
+                error = True
+
+    if error or not result.kaspad.is_synced:
+        return JSONResponse(status_code=500, content=result.dict())
+
+    return result
 
 
 kaspad_hosts = []
