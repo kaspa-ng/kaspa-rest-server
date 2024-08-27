@@ -3,7 +3,7 @@ import asyncio
 
 from kaspad.KaspadClient import KaspadClient
 
-# pipenv run python -m grpc_tools.protoc -I./protos --python_out=. --grpc_python_out=. ./protos/rpc.proto ./protos/messages.proto ./protos/p2p.proto
+# poetry run python -m grpc_tools.protoc -I./protos --python_out=. --grpc_python_out=. ./protos/rpc.proto ./protos/messages.proto
 from kaspad.KaspadThread import KaspadCommunicationError
 
 

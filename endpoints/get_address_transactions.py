@@ -184,6 +184,9 @@ async def get_full_transactions_for_address_page(
         )
 
         tx_ids_and_block_times = [(x.transaction_id, x.block_time) for x in tx_within_limit_before.all()]
+        if not tx_ids_and_block_times:
+            return []
+
         tx_ids = {tx_id for tx_id, block_time in tx_ids_and_block_times}
         oldest_block_time = tx_ids_and_block_times[-1][1]
 

@@ -24,6 +24,10 @@ waitress = "^3.0.0"
 starlette = "^0.37.2"
 fastapi-utils = "^0.2.1"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.1"
+pytest = "^8.3.2"
+
 [tool.ruff]
 line-length=120
 

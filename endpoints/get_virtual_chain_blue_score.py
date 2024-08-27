@@ -16,13 +16,13 @@ async def get_virtual_selected_parent_blue_score():
     """
     Returns the blue score of virtual selected parent
     """
-    resp = await kaspad_client.request("getVirtualSelectedParentBlueScoreRequest")
-    return resp["getVirtualSelectedParentBlueScoreResponse"]
+    resp = await kaspad_client.request("getSinkBlueScoreRequest")
+    return resp["getSinkBlueScoreResponse"]
 
 
 @app.on_event("startup")
 @repeat_every(seconds=5)
 async def update_blue_score():
     global current_blue_score_data
-    resp = await kaspad_client.request("getVirtualSelectedParentBlueScoreRequest")
-    current_blue_score_data["blue_score"] = int(resp["getVirtualSelectedParentBlueScoreResponse"]["blueScore"])
+    resp = await kaspad_client.request("getSinkBlueScoreRequest")
+    current_blue_score_data["blue_score"] = int(resp["getSinkBlueScoreResponse"]["blueScore"])

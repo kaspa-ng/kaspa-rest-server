@@ -9,11 +9,12 @@ from sqlalchemy import select, exists, func
 
 from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
-from models.BlockParent import BlockParent
-from models.Subnetwork import Subnetwork
+from helper.mining_address import get_miner_payload_from_block, retrieve_miner_info_from_payload
 from models.Block import Block
+from models.BlockParent import BlockParent
 from models.BlockTransaction import BlockTransaction
 from models.ChainBlock import ChainBlock
+from models.Subnetwork import Subnetwork
 from models.Transaction import TransactionOutput, TransactionInput, Transaction
 from server import app, kaspad_client
 
@@ -53,7 +54,8 @@ class BlockHeader(BaseModel):
 
 class ExtraModel(BaseModel):
     color: str | None = None
-    miner_address: str | None = None
+    minerAddress: str | None = None
+    minerInfo: str = None
 
 
 class BlockModel(BaseModel):
@@ -82,8 +84,17 @@ async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"
     block = None
     if "block" in resp["getBlockResponse"]:
         block = resp["getBlockResponse"]["block"]
+
+        block["extra"] = {}
         if block and includeColor:
-            block["extra"] = {"color": await get_block_color_from_kaspad(block)}
+            block["extra"]["color"] = await get_block_color_from_kaspad(block)
+
+        miner_payload = get_miner_payload_from_block(block)
+        miner_info, miner_address = retrieve_miner_info_from_payload(miner_payload)
+
+        block["extra"]["minerInfo"] = miner_info
+        block["extra"]["minerAddress"] = miner_address
+
     else:
         if IS_SQL_DB_CONFIGURED:
             response.headers["X-Data-Source"] = "Database"

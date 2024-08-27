@@ -1,4 +1,4 @@
-name: Docker Image
+name: Docker Image Branch
 on:
   push:
     branches-ignore:
@@ -22,12 +22,13 @@ jobs:
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
-        username: lamer1
+        username: ${{ secrets.DOCKER_USER }}
         password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
     - name: Set up QEMU (for ARM64 emulation)
       if: matrix.arch == 'arm64'
       run: |
+        sudo apt-get update
         sudo apt-get install -y qemu-user-static
 
     - name: Set up Docker Buildx (for multi-platform builds)
