@@ -58,7 +58,7 @@ def tx_serialized_size(tx):
     return size
 
 
-def compute_mass(tx):
+def calc_compute_mass(tx):
     """
     Calculate mass for a TX-OBJECT
     :param tx:
@@ -81,5 +81,4 @@ def compute_mass(tx):
 
     # calc mass for all inputs with sigOpCount
     total_sigops_mass = MASS_PER_SIG_OP * sum([x["sigOpCount"] for x in tx["inputs"]])
-
     return int(mass + total_script_public_key_mass + total_sigops_mass)

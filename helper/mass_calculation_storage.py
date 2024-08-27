@@ -15,7 +15,7 @@ def _negative_mass(inputs, outputs_num):
     return inputs_num * (C // (sum(inputs) // inputs_num))
 
 
-def storage_mass(inputs, outputs):
+def calc_storage_mass(inputs, outputs):
     """
     Calculates the storage mass for the provided input/output collections
     """
