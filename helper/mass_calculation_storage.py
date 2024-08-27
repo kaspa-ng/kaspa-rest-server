@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Storage mass constant
 C = 10**12
 
@@ -20,11 +22,3 @@ def storage_mass(inputs, outputs):
     N = _negative_mass(inputs, outputs_num=len(outputs))
     P = sum(C // o for o in outputs)
     return max(P - N, 0)
-
-
-print(
-    storage_mass(
-        [206327320455591],
-        [5832704943, 206321487740648],
-    )
-)
