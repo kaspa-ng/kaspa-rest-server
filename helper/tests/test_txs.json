@@ -1,0 +1,468 @@
+[
+  {
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "729121cb282cabf87784e5f53d7b436943df4143b3dbcc82b5f869d28685c5c4",
+          "index": 5
+        },
+        "signatureScript": "41f2c4b4adfebb87a63460314a6e3fc4a67304650c3662d9e276f0c63a7e6ce99e55c95c148d26f1da85fbce387a113fb664cd216fd8ea31fa1accdf40d0d5d36801",
+        "sigOpCount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "amount": "11876851949",
+        "scriptPublicKey": {
+          "scriptPublicKey": "203195dc5eb7ba6451935810165a1d346e13394b9060e52b55667e7dfa8e2ca3b2ac"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qqcethz7k7axg5vntqgpvksax3hpxw2tjpsw2264vel8m75w9j3myxtdg2e3w"
+        }
+      },
+      {
+        "amount": "11662651309",
+        "scriptPublicKey": {
+          "scriptPublicKey": "201b934a2b15467407a64f5778cbe4867e101dc8e4aeb74afc9e9b1d55b1b40f3cac"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qqdexj3tz4r8gpaxfath3jlyselpq8wgujhtwjhun6d364d3ks8nclmw907lm"
+        }
+      },
+      {
+        "amount": "11375894283",
+        "scriptPublicKey": {
+          "scriptPublicKey": "203a76a633b77ebfc69bed8a5ee7ddd0a394b3b316667fff51287a66ccb16c44c6ac"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qqa8df3nkaltl35mak99ae7a6z3efvanzen8ll639paxdn93d3zvv4zy9csnp"
+        }
+      },
+      {
+        "amount": "185832292681",
+        "scriptPublicKey": {
+          "scriptPublicKey": "20985cb6aa3615cde9ae0be55dfe3a42c1c0605416ccdf40303e8fe40e0eeacd9eac"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qzv9ed42xc2um6dwp0j4ml36gtquqcz5zmxd7sps8687grswatxeu7535nzet"
+        }
+      },
+      {
+        "amount": "112660178849",
+        "scriptPublicKey": {
+          "scriptPublicKey": "20fcbe4bfb6e2d4d69f31372f557fb90ccfecd2e2a25d97f728a4ceb3893f18a90ac"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qr7tujlmdck5660nzde024lmjrx0anfw9gjajlmj3fxwkwyn7x9fq8y6uy66k"
+        }
+      },
+      {
+        "amount": "46586409843469",
+        "scriptPublicKey": {
+          "scriptPublicKey": "210271b91745db170fd9ab3456842faf212a40f9d65dcd03beb63c625d4d10cf86d4ab"
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkeyecdsa",
+          "scriptPublicKeyAddress": "kaspa:qyp8rwghghd3wr7e4v69dpp04usj5s8e6ewu6qa7kc7xyh2dzr8cd4qhmuzczr0"
+        }
+      }
+    ],
+    "subnetworkId": "0000000000000000000000000000000000000000",
+    "verboseData": {
+      "transactionId": "9a928d40bd2fbfd543cfc9a51e8902d315f905da583199b53a032f0a8136a2e8",
+      "hash": "495e1b41c633dcc979b926fc457cca9acbfb4bb87f5213e395ace5b22a2741be",
+      "mass": "3695",
+      "blockHash": "08821d5ce3e8460e4df7538dce3a586ead2b86e31d41c4a41c9690281471e3a6",
+      "blockTime": "1682408482153"
+    }
+  },
+  {
+    "outputs": [
+      {
+        "amount": "9249867603",
+        "scriptPublicKey": {
+          "scriptPublicKey": "207bbb32e8bbec2351e873181a1a07b2f60e2f048b5302b71177bfb28c0f143da6ac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qpamkvhgh0kzx50gwvvp5xs8ktmqutcy3dfs9dc3w7lm9rq0zs76vf959mmrp"
+        }
+      },
+      {
+        "amount": "9249860567",
+        "scriptPublicKey": {
+          "scriptPublicKey": "2039ca10330c66f176bce45b7394695a27216ff8886b811abfed6606d7f372a7aaac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qquu5ypnp3n0za4uu3dh89rftgnjzmlc3p4czx4la4nqd4lnw2n65fsq8y8le"
+        }
+      }
+    ],
+    "subnetworkId": "0100000000000000000000000000000000000000",
+    "payload": "24922d0500000000d7ab552702000000000022207bbb32e8bbec2351e873181a1a07b2f60e2f048b5302b71177bfb28c0f143da6ac302e31342e312f4632506f6f6c2f3632323562646539323131313938343935633062306331666234316335306430",
+    "verboseData": {
+      "transactionId": "bb62ca0e7a190daf67bb39af6f47dabb92888f21013d7bd01486e65cfbc3049c",
+      "hash": "afaaeb41f294b76645304c290fa55ce2b9062f3221eec8f5910b2431a740bb19",
+      "blockHash": "eae86bea5008d927fdae73ffce77911319ff73a380ba8cd3a16a81f9d9b3adab",
+      "blockTime": "1724792536839",
+      "mass": "0"
+    },
+    "version": 0,
+    "inputs": [],
+    "lockTime": "0",
+    "gas": "0"
+  },
+  {
+    "outputs": [
+      {
+        "amount": "9249860567",
+        "scriptPublicKey": {
+          "scriptPublicKey": "207bbb32e8bbec2351e873181a1a07b2f60e2f048b5302b71177bfb28c0f143da6ac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qpamkvhgh0kzx50gwvvp5xs8ktmqutcy3dfs9dc3w7lm9rq0zs76vf959mmrp"
+        }
+      }
+    ],
+    "subnetworkId": "0100000000000000000000000000000000000000",
+    "payload": "22922d0500000000d7ab552702000000000022207bbb32e8bbec2351e873181a1a07b2f60e2f048b5302b71177bfb28c0f143da6ac302e31342e312f4632506f6f6c2f3961623038303066336434353231343862643535396536393139393939623337",
+    "verboseData": {
+      "transactionId": "67a706e744e147dd590407386df3380a10ae11e34fdc4edee80d95a515e26d11",
+      "hash": "9a3a6740e2ed138a19a26d797467b3127d2467337c0e22d51e1281274e7ed911",
+      "blockHash": "da3f6c78d9b893350a3a90a23d21a880166577fc181e98fc62065c949190ee14",
+      "blockTime": "1724792536050",
+      "mass": "0"
+    },
+    "version": 0,
+    "inputs": [],
+    "lockTime": "0",
+    "gas": "0"
+  },
+  {
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "27154e5318881cf47043ccc7c1546b645c293532574544b4ab464b74fd4b3a31",
+          "index": 1
+        },
+        "signatureScript": "416c6bd559672fdaba95e1cb3629ee8adf5eb7aeef840579dbac3f039e76dfd6259637cbd2cb45e8a447dcffd2843573fdb624b9deb0701fe5cd47acb94766400d01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      }
+    ],
+    "outputs": [
+      {
+        "amount": "5923781812",
+        "scriptPublicKey": {
+          "scriptPublicKey": "205d946705b7fd6fc171c096c2753dc48d44102f615f40eea67d35cca8fc5317aaac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qpwegec9kl7klst3cztvyafacjx5gyp0v905pm4x056ue28u2vt65plt4fudp"
+        }
+      },
+      {
+        "amount": "348245672662",
+        "scriptPublicKey": {
+          "scriptPublicKey": "204967bc1ac32db3b6ebeee9f820225879f933dfc906574f9e0eecc56f92ec7d82ac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qpyk00q6cvkm8dhtam5lsgpztpuljv7leyr9wnu7pmkv2muja37cy408ypmwq"
+        }
+      }
+    ],
+    "subnetworkId": "0000000000000000000000000000000000000000",
+    "verboseData": {
+      "transactionId": "f6df7dc84bf44312b169ae6e6704b6c6ca2199a26449f9776ced937b30928941",
+      "hash": "86a12e86c29479c5f27accc9c4c4579642793edb89318147a57b70df5beb02ba",
+      "mass": "2036",
+      "blockHash": "da3f6c78d9b893350a3a90a23d21a880166577fc181e98fc62065c949190ee14",
+      "blockTime": "1724792536050"
+    },
+    "version": 0,
+    "lockTime": "0",
+    "gas": "0",
+    "payload": ""
+  },
+  {
+    "outputs": [
+      {
+        "amount": "9249860567",
+        "scriptPublicKey": {
+          "scriptPublicKey": "207bbb32e8bbec2351e873181a1a07b2f60e2f048b5302b71177bfb28c0f143da6ac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qpamkvhgh0kzx50gwvvp5xs8ktmqutcy3dfs9dc3w7lm9rq0zs76vf959mmrp"
+        }
+      }
+    ],
+    "subnetworkId": "0100000000000000000000000000000000000000",
+    "payload": "e6922d0500000000d7ab55270200000000002220311eaa45a32f32cbe02b4fede4c4479aec3fec9918271028758b733df7ad6c36ac302e31342e312f766961627463",
+    "verboseData": {
+      "transactionId": "93a568ee3192f225c6028e93d1aee17a1b21cf8298a5c5443ef7708721edc4d6",
+      "hash": "74e1dcdee971b1ef2500557c9a3afe48306ed17e0466139569db8732122d16b4",
+      "blockHash": "968ddbe8af8b10081fbeb821a2e9fb14cdda731f6dae55d2240292c93c424213",
+      "blockTime": "1724792723906",
+      "mass": "0"
+    },
+    "version": 0,
+    "inputs": [],
+    "lockTime": "0",
+    "gas": "0"
+  },
+  {
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "ac59da8c0314cac3b31b93bd59f878d369e426080ad292252378127f0b9a95fb",
+          "index": 1
+        },
+        "signatureScript": "41ef3a5cb88e6622029d85fc6d3697a7edf28f28c6dac9b91c8a2371da33510a76df51adedd357609d87599467de46a2ac96fb95ae5f0369e9c8645e5ad533c3e701",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "ac59da8c0314cac3b31b93bd59f878d369e426080ad292252378127f0b9a95fb",
+          "index": 0
+        },
+        "signatureScript": "410ee6c20567edac15ae1682e77cc0550afe4dde1f7e92dd4861f24a164961052c383470540e7db2f0ccbf7ad757bd5613909e606f39c3299aa2db9d7b9811853501",
+        "sigOpCount": 1,
+        "sequence": "0"
+      }
+    ],
+    "outputs": [
+      {
+        "amount": "247312595110",
+        "scriptPublicKey": {
+          "scriptPublicKey": "206299cccb33813c1d8f589f62f6cb06b89a812d052df090a056569e1b318a2a07ac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qp3fnnxtxwqnc8v0tz0k9aktq6uf4qfdq5klpy9q2etfuxe33g4qwwcf42f6e"
+        }
+      }
+    ],
+    "subnetworkId": "0000000000000000000000000000000000000000",
+    "verboseData": {
+      "transactionId": "d5ff8cf41be9f6e9b4d5f866eec4a2f01157a668b4a16853fc62c01f57aa6ddd",
+      "hash": "2903f59b61080905c474e8338ee692c12007ba78b780c51727513778f6bf94bc",
+      "mass": "2742",
+      "blockHash": "968ddbe8af8b10081fbeb821a2e9fb14cdda731f6dae55d2240292c93c424213",
+      "blockTime": "1724792723906"
+    },
+    "version": 0,
+    "lockTime": "0",
+    "gas": "0",
+    "payload": ""
+  },
+  {
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "482e7817838cc377638f9dec24bfc884e046010b5661c4bf8fe0cc39268d0af3",
+          "index": 0
+        },
+        "signatureScript": "419c1cb30268b8693daad76f4e2125e763cc0e861c0366baea3ae18a4111d13760a31c7d6806c4dde82d573c882c2b8f67d1fcb183e90054691ac33d6ca701b49601",
+        "sigOpCount": 1,
+        "sequence": "0"
+      }
+    ],
+    "outputs": [
+      {
+        "amount": "5075643838",
+        "scriptPublicKey": {
+          "scriptPublicKey": "20236ab79a7254856a5e6c34906d0b47588dc444d7b4e9ac2acd1538727054eb0dac",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkey",
+          "scriptPublicKeyAddress": "kaspa:qq3k4du6wf2g26j7ds6fqmgtgavgm3zy676wntp2e52nsuns2n4s6xkndmx0y"
+        }
+      }
+    ],
+    "subnetworkId": "0000000000000000000000000000000000000000",
+    "verboseData": {
+      "transactionId": "8bfbe3a953d7a89a2a40924e05b778bf2349415e726cbccca95baaafb1c065a2",
+      "hash": "2712c730cc947dde0d91bdbd38c8823497c73c4a0669e6347089fd5a6dc70df8",
+      "mass": "1624",
+      "blockHash": "968ddbe8af8b10081fbeb821a2e9fb14cdda731f6dae55d2240292c93c424213",
+      "blockTime": "1724792723906"
+    },
+    "version": 0,
+    "lockTime": "0",
+    "gas": "0",
+    "payload": ""
+  },
+  {
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "3ae0cf5ab4da68fa8dc2171b838e898b78a10c8007d15e999f8aa054c1a3f96d",
+          "index": 33
+        },
+        "signatureScript": "410694b8a54ade521e907418462d8b7c0070613e7ea5bd385321cea11c3109f6276e2948c1ef2deb371fc2341b84cc5fbfb5d80c11bd19e91c776847fa92a56bcf01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "2dea79de7523bd8c5d41348e90aa3c2896903f0cb25f07727e40b4d9ebc6183c",
+          "index": 28
+        },
+        "signatureScript": "41853863af6f06c8f7c53823bd8b95a143c9513f09f194abf2a82e72c0380b6cfbf4fa89e1a54ca72398def99595fbb57fc0b8c9fef6084c9edaed4c91b37e931101",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "856f07c8a20d54bc517808fd06e27d27983daeef0c482c9465b82f1698df4659",
+          "index": 184
+        },
+        "signatureScript": "410a7df18a2e096a9cc1eee0bb620b1148d728a8dd88bbbddddc2f937e5f5d3737fea5126af6a331997771fa76fa0c11f33e34385bf3a47c6bd379f2247c4c8d0b01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "6ae1e113e6572ca9649ff04a06ec3a249b3a92cba4d3e3c8a2e638b7cebea10d",
+          "index": 184
+        },
+        "signatureScript": "4128a8403e9f1a04c7c917a0b511934708c75c58cdc3f3af43b0cb53f2525a05341a172d1e4535d81e3bfc9696a43e272819340be15d61fd749b18dfb995647cb001",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "38872c2c3938098cad71aef5cce2ac7e0ca810680b8105ebf626cfbdc08269cc",
+          "index": 52
+        },
+        "signatureScript": "412f7cb6069a14ee53693bad74075325dfaf8daf51f7963b754fd3acbe06e4eb64a874a8322ef8e1489b4056c4ad24687885e0b81f7992d2f07789db1498bdfbff01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "77158243a6dbde4586c53492eff1d71fc9d13e8781f35653e563322c11404bac",
+          "index": 173
+        },
+        "signatureScript": "41f090e2f4fb3ee10148c449cb8884b8c1adeaca8d8639e6db59150b6647f0103e264081c9f7d4fdcd2e3c35e97c87441a43276fa51ebdda7c4e11beb307f4249801",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "56a34b4fc14c406c8c2ea411a221300c3a44e4249eb81bbb031d2075d1094728",
+          "index": 43
+        },
+        "signatureScript": "415ecb1acaefaeabd32b343a12fa837c6d49e0121c52655ea7de7713e063e944eb00854f0469636f3db0805d2a85537ac60aa8d8735b8b75dca40c43bbceecd63d01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "1976af6a783d372edf57da5afac02a3aaea68e3b04dd0861ea2e6f86696c074c",
+          "index": 108
+        },
+        "signatureScript": "41269da3132b3f22f0a2dc1bcef58cb59b7bfa1d1d93d675acdb1a97010ea02426e93889f1469b8a73b6eb732bf8f408f7ebce4ca80b4d51b62997e16c507da80801",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "fc6aedcadded362456b2fe75bf0c19e443af9fdd9c76db0ee0b05efbdad9eda1",
+          "index": 19
+        },
+        "signatureScript": "41373c9c0b998fa8c76d4e4c3ef0ac792dd8d4e9ddf8cae901fba30ac6c60413f5f4147b739e77d8a05fe7b9aaa1dcd7456c224d8ed7ca45124de1f816f57a6ac201",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "40087139666c850f4ad5cc954f1cc2843311907a7ea28c93e27b340f53635bc5",
+          "index": 200
+        },
+        "signatureScript": "412c1af20afe80028c5070b57fa64a775b73a389c20010dabef555e0de7001a77490595f7d3e1b04f34a9c5357c9ac7e9bb94aa27c7824b9f079263e44cc9bcd0a01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "f3db20ab889574ed76ba068ddd1b1130ce24f252166df3f1aa313f191de87e3e",
+          "index": 164
+        },
+        "signatureScript": "41ac929b8dc8e7822cc945c5ef8f510296569cf644c4e1e07ca9c7c21fbd439a0eb6e93178f174c1d8a84edd4e983e0bd07153a89af358f0b288661e092e64a10f01",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "66a9f43502a20a2de9320f9521511d6de34b7a6068fd5c4e25a1416f5b9bc9b2",
+          "index": 96
+        },
+        "signatureScript": "41535333c8553b7a335095b2913e422108b6b72cdc42595ced4e5ff96231b771ce3a9014851f2a895d6229b7ac141383660199fb1141beab22b953bd32cf5ccd6401",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "e08b1a38e5e6b7c02cdc33c9a5f16b1a48fc54964c9368508f4ba2a4d79553ab",
+          "index": 3
+        },
+        "signatureScript": "413f4a7e589a8c1515e9925581b96e45026109980d92002ec140830922e6929a15fbb8e208cfcb30248c81cfe12dbe75e542ea80a79b933343b8ac94f8de1716f401",
+        "sigOpCount": 1,
+        "sequence": "0"
+      },
+      {
+        "previousOutpoint": {
+          "transactionId": "c07d130417f20e1a01e0de2dc78819d237acc03ce51acf12b0c9c7560df80c19",
+          "index": 220
+        },
+        "signatureScript": "41239f30ada1d2f6589e006ca93b8920e01a6676a1c5a89878eb2dee326972a45f8519224018bcea21e144e593ee6cea955f9ce2c093d3673638aebd199eb905a101",
+        "sigOpCount": 1,
+        "sequence": "0"
+      }
+    ],
+    "outputs": [
+      {
+        "amount": "14094238206",
+        "scriptPublicKey": {
+          "scriptPublicKey": "2102d1d6e935632a1771c2c83040f83fbc700df63ce894cb36c311d6b61402ff5538ab",
+          "version": 0
+        },
+        "verboseData": {
+          "scriptPublicKeyType": "pubkeyecdsa",
+          "scriptPublicKeyAddress": "kaspa:qypdr4hfx43j59m3ctyrqs8c8778qr0k8n5ffjekcvgadds5qtl42wqhl9jlwgd"
+        }
+      }
+    ],
+    "subnetworkId": "0000000000000000000000000000000000000000",
+    "verboseData": {
+      "transactionId": "72cf5aeab984a93763471bfaff459fa5649c8cd0c8199c2fc6a965e0b81cdfe9",
+      "hash": "a2f08d421f18a702563eafdbbc5f6d0d09cf382fc09dc2e3da56c2cb3d7102e8",
+      "mass": "16169",
+      "blockHash": "968ddbe8af8b10081fbeb821a2e9fb14cdda731f6dae55d2240292c93c424213",
+      "blockTime": "1724792723906"
+    },
+    "version": 0,
+    "lockTime": "0",
+    "gas": "0",
+    "payload": ""
+  }
+]
