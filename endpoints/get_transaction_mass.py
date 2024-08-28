@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 from endpoints.get_transactions import search_for_transactions, TxSearch
@@ -39,6 +40,9 @@ async def calculate_transaction_mass(tx: SubmitTxModel):
             TxSearch(transactionIds=list([x.transactionId for x in previous_outpoints])), "", False
         )
     )
+
+    if len(txs) != len(previous_outpoints):
+        raise HTTPException(status_code=404, detail="Previous outpoint(s) not found in database.")
 
     tx_input_amounts = [
         _get_amount_from_tx_output_index(
