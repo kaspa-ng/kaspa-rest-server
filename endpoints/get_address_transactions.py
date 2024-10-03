@@ -1,12 +1,11 @@
 # encoding: utf-8
-import re
 import time
 from enum import Enum
 from typing import List
 
 from fastapi import Path, Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import text, func
+from sqlalchemy import func
 from sqlalchemy.future import select
 from starlette.responses import Response
 
@@ -48,59 +47,6 @@ class PreviousOutpointLookupMode(str, Enum):
     no = "no"
     light = "light"
     full = "full"
-
-
-@app.get(
-    "/addresses/{kaspaAddress}/transactions",
-    response_model=TransactionForAddressResponse,
-    response_model_exclude_unset=True,
-    tags=["Kaspa addresses"],
-    openapi_extra={"strict_query_params": True},
-)
-@sql_db_only
-async def get_transactions_for_address(
-    kaspaAddress: str = Path(
-        description="Kaspa address as string e.g. " f"{ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS
-    ),
-):
-    """
-    Get all transactions for a given address from database
-    """
-    # SELECT transactions_outputs.transaction_id, transactions_inputs.transaction_id as inp_transaction FROM transactions_outputs
-    #
-    # LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions_outputs.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
-    #
-    # WHERE "script_public_key_address" = 'kaspa:qp7d7rzrj34s2k3qlxmguuerfh2qmjafc399lj6606fc7s69l84h7mrj49hu6'
-    #
-    # ORDER by transactions_outputs.transaction_id
-    kaspaAddress = re.sub(
-        r"^kaspa(test)?:", "", kaspaAddress
-    )  # Custom query bypasses the TypeDecorator, must handle it manually
-    async with async_session() as session:
-        resp = await session.execute(
-            text("""
-            SELECT o.transaction_id, i.transaction_id
-            FROM transactions t
-            LEFT JOIN transactions_outputs o ON t.transaction_id = o.transaction_id
-            LEFT JOIN transactions_inputs i ON i.previous_outpoint_hash = t.transaction_id AND i.previous_outpoint_index = o.index
-            WHERE o.script_public_key_address = :kaspaAddress
-            ORDER by t.block_time DESC
-            LIMIT 500"""),
-            {"kaspaAddress": kaspaAddress},
-        )
-
-        resp = resp.all()
-
-    # build response
-    tx_list = []
-    for x in resp:
-        tx_list.append(
-            {
-                "tx_received": x[0].hex() if x[0] is not None else None,
-                "tx_spent": x[1].hex() if x[1] is not None else None,
-            }
-        )
-    return {"transactions": tx_list}
 
 
 @app.get(
