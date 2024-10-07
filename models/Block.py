@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, BigInteger, SmallInteger
+from sqlalchemy import Column, BigInteger, SmallInteger
 
 from dbsession import Base
 from models.type_decorators.HexColumn import HexColumn
@@ -10,7 +10,6 @@ class Block(Base):
     __tablename__ = "blocks"
     hash = Column(HexColumn, primary_key=True)
     accepted_id_merkle_root = Column(HexColumn)
-    difficulty = Column(Float)
     merge_set_blues_hashes = Column(HexArrayColumn)
     merge_set_reds_hashes = Column(HexArrayColumn)
     selected_parent_hash = Column(HexColumn)

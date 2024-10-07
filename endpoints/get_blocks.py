@@ -9,6 +9,7 @@ from sqlalchemy import select, exists, func
 
 from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
+from helper.difficulty_calculation import bits_to_difficulty
 from helper.mining_address import get_miner_payload_from_block, retrieve_miner_info_from_payload
 from models.Block import Block
 from models.BlockParent import BlockParent
@@ -215,7 +216,7 @@ def map_block_from_db(block, is_chain_block, parents, children, transaction_ids,
         "transactions": transactions,
         "verboseData": {
             "hash": block.hash,
-            "difficulty": block.difficulty,
+            "difficulty": bits_to_difficulty(block.bits),
             "selectedParentHash": block.selected_parent_hash,
             "transactionIds": transaction_ids,
             "blueScore": block.blue_score,

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from dbsession import async_session
 from endpoints import sql_db_only
 from helper import KeyValueStore
+from helper.difficulty_calculation import bits_to_difficulty
 from models.Block import Block
 from server import app, kaspad_client
 
@@ -63,12 +64,13 @@ async def get_max_hashrate():
             await s.execute(
                 select(Block)
                 .filter(Block.blue_score > maxhash_last_bluescore)
-                .order_by(Block.difficulty.desc())
+                .order_by(Block.bits.asc())  # bits and difficulty is inversely proportional
                 .limit(1)
             )
         ).scalar()
 
-    hashrate_new = block.difficulty * 2
+    block_difficulty = bits_to_difficulty(block.bits)
+    hashrate_new = block_difficulty * 2
     hashrate_old = maxhash_last_value.get("blockheader", {}).get("difficulty", 0) * 2
 
     await KeyValueStore.set("maxhash_last_bluescore", str(block.blue_score))
@@ -79,7 +81,7 @@ async def get_max_hashrate():
             "blockheader": {
                 "hash": block.hash,
                 "timestamp": datetime.fromtimestamp(block.timestamp / 1000).isoformat(),
-                "difficulty": block.difficulty,
+                "difficulty": block_difficulty,
                 "daaScore": block.daa_score,
                 "blueScore": block.blue_score,
             },
