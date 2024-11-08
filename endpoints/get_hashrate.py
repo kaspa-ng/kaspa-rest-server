@@ -39,7 +39,7 @@ async def get_hashrate(stringOnly: bool = False):
 
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     hashrate = resp["getBlockDagInfoResponse"]["difficulty"] * 2
-    hashrate_in_th = hashrate / 1_000_000_000_000
+    hashrate_in_th = hashrate / 1e12
 
     if not stringOnly:
         return {"hashrate": hashrate_in_th}
@@ -76,7 +76,7 @@ async def get_max_hashrate():
 
     if hashrate_new > hashrate_old:
         response = {
-            "hashrate": hashrate_new / 1_000_000_000_000,
+            "hashrate": hashrate_new / 1e12,
             "blockheader": {
                 "hash": block.hash,
                 "timestamp": datetime.fromtimestamp(block.timestamp / 1000).isoformat(),
