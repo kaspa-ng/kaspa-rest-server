@@ -17,9 +17,9 @@ from models.TransactionAcceptance import TransactionAcceptance
 from server import app
 
 DESC_RESOLVE_PARAM = (
-    "Use this parameter if you want to fetch the TransactionInput previous outpoint details."
-    " Light fetches only the address and amount. Full fetches the whole TransactionOutput and "
-    "adds it into each TxInput."
+    "Use this parameter to fetch details of the TransactionInput's previous outpoint."
+    " 'Light' mode fetches only the address and amount, while 'Full' mode fetches the entire TransactionOutput"
+    " and adds it to each TxInput."
 )
 
 
@@ -95,7 +95,12 @@ async def get_transaction(
     ),
 ):
     """
-    Get block information for a given block id
+    Retrieves transaction details for a given transaction ID from the database.
+    Optionally includes `inputs` and `outputs`. Use `resolve_previous_outpoints` to
+    enrich each input with data from the referenced previous outpoint. Modes:
+    - `no`: No outpoint resolution.
+    - `light`: Includes only address and amount.
+    - `full`: Full outpoint data.
     """
     async with async_session() as s:
         tx = await s.execute(
@@ -205,7 +210,13 @@ async def search_for_transactions(
     ),
 ):
     """
-    Get block information for a given block id
+    Searches for transactions by a list of transaction IDs with optional field filtering.
+    Limits the ID list size to 1000; reduced to 50 for light/full previous outpoint resolution.
+    Use the `fields` parameter to filter returned fields and optimize query load.
+    Modes for `resolve_previous_outpoints`:
+    - `no`: No outpoint data.
+    - `light`: Adds address and amount from referenced outpoints.
+    - `full`: Includes full outpoint data.
     """
     if len(txSearch.transactionIds) > 1000:
         raise HTTPException(422, "Too many transaction ids")
