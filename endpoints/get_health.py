@@ -27,7 +27,8 @@ class HealthResponse(BaseModel):
 @app.get("/info/health", response_model=HealthResponse, tags=["Kaspa network info"])
 async def health_state():
     """
-    Returns the current hashrate for Kaspa network in TH/s.
+    Checks health by verifying transaction recency and node sync status.
+    Returns each node's status and version.
     """
     await kaspad_client.initialize_all()
 

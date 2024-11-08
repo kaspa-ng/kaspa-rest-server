@@ -62,8 +62,23 @@ class SubmitTransactionResponse(BaseModel):
 )
 async def submit_a_new_transaction(
     body: SubmitTransactionRequest,
-    replaceByFee: bool = Query(description="Replace an existing transaction in the mempool", default=False),
+    replaceByFee: bool = Query(False, description="Replace an existing transaction in the mempool"),
 ):
+    """
+    Submits a new transaction to the Kaspa network.
+    This endpoint forwards the provided transaction data to the Kaspa daemon (`Kaspad`)
+    using the `submitTransactionRequest` command. If successful, it returns the transaction ID.
+
+    **Parameters:**
+    - `body`: JSON object containing:
+      - `transaction`: Transaction details, including version, inputs, outputs, lockTime, and subnetworkId.
+      - `allowOrphan` (optional): Boolean indicating if orphan transactions are allowed.
+    - `replaceByFee` (optional): Boolean indicating whether to replace an existing transaction in the mempool.
+
+    **Response:**
+    - `transactionId`: Returns the transaction ID on success.
+    - `error`: Returns an error message if the submission fails.
+    """
     if replaceByFee:
         # Replace by fee doesn't have the allowOrphan attribute
         body = SubmitTransactionReplacementRequest(transaction=body.transaction)
