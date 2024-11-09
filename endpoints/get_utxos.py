@@ -35,7 +35,7 @@ async def get_utxos_for_address(
     kaspaAddress: str = Path(description=f"Kaspa address as string e.g. {ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS),
 ):
     """
-    Lists all open utxo for a given kaspa address
+    List all unspent transaction outputs (UTXOs) for the specified Kaspa address.
     """
     resp = await kaspad_client.request("getUtxosByAddressesRequest", params={"addresses": [kaspaAddress]}, timeout=120)
     try:

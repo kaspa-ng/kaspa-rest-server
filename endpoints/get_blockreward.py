@@ -13,7 +13,7 @@ class BlockRewardResponse(BaseModel):
 @app.get("/info/blockreward", response_model=BlockRewardResponse | str, tags=["Kaspa network info"])
 async def get_blockreward(stringOnly: bool = False):
     """
-    Returns the current blockreward in KAS/block
+    Returns the current blockreward in KAS/block.
     """
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     daa_score = int(resp["getBlockDagInfoResponse"]["virtualDaaScore"])

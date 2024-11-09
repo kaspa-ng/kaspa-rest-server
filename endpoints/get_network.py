@@ -27,7 +27,7 @@ class NetworkResponse(BaseModel):
 @app.get("/info/network", response_model=NetworkResponse, tags=["Kaspa network info"])
 async def get_network():
     """
-    Get some global kaspa network information
+    Get some global Kaspa network information
     """
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     return resp["getBlockDagInfoResponse"]
