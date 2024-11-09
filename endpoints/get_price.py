@@ -31,6 +31,6 @@ async def get_price(stringOnly: bool = False):
 @mainnet_only
 async def get_market_data():
     """
-    Returns market data for kaspa.
+    Returns market data for Kaspa.
     """
     return await get_kas_market_data() if not DISABLE_PRICE else {}

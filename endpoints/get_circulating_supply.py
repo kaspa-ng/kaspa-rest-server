@@ -14,7 +14,7 @@ class CoinSupplyResponse(BaseModel):
 @app.get("/info/coinsupply", response_model=CoinSupplyResponse, tags=["Kaspa network info"])
 async def get_coinsupply():
     """
-    Get $KAS coin supply information
+    Get $KAS coin supply information.
     """
     resp = await kaspad_client.request("getCoinSupplyRequest")
     return {
@@ -27,7 +27,7 @@ async def get_coinsupply():
 @app.get("/info/coinsupply/circulating", tags=["Kaspa network info"], response_class=PlainTextResponse)
 async def get_circulating_coins(in_billion: bool = False):
     """
-    Get circulating amount of $KAS token as numerical value
+    Get circulating amount of $KAS coin as numerical value.
     """
     resp = await kaspad_client.request("getCoinSupplyRequest")
     coins = str(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 1e8)
@@ -40,7 +40,7 @@ async def get_circulating_coins(in_billion: bool = False):
 @app.get("/info/coinsupply/total", tags=["Kaspa network info"], response_class=PlainTextResponse)
 async def get_total_coins():
     """
-    Get total amount of $KAS token as numerical value
+    Get total amount of $KAS coin as numerical value.
     """
     resp = await kaspad_client.request("getCoinSupplyRequest")
     return str(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 1e8)
