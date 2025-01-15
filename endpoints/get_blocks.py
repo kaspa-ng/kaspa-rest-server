@@ -79,7 +79,8 @@ class BlockResponse(BaseModel):
 @app.get("/blocks/{blockId}", response_model=BlockModel, tags=["Kaspa blocks"])
 async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"), includeColor: bool = False):
     """
-    Get block information for a given block id
+    Retrieves detailed block data for a specified block hash (blockId) from the Kaspa blockDAG.
+    Attempts to fetch the block details from the Kaspad node. If unavailable, fetches the data from database as a fallback.
     """
     resp = await kaspad_client.request("getBlockRequest", params={"hash": blockId, "includeTransactions": True})
     block = None
@@ -121,7 +122,11 @@ async def get_blocks(
     includeTransactions: bool = False,
 ):
     """
-    Lists block beginning from a low hash (block id).
+    Lists blocks beginning from a specified low hash (block ID) in the Kaspa blockDAG.
+    Attempts to retrieve the blocks from the Kaspad node. If unsuccessful, queries the database as a backup,
+    adding "x-data-source: database" to the response header if data is retrieved from the database.
+
+    Note: Fields in verboseData (isChainBlock, childrenHashes, transactionIds) may not be populated in this response.
     """
     response.headers["Cache-Control"] = "public, max-age=3"
 
@@ -135,7 +140,8 @@ async def get_blocks(
 @app.get("/blocks-from-bluescore", response_model=List[BlockModel], tags=["Kaspa blocks"])
 async def get_blocks_from_bluescore(response: Response, blueScore: int = 43679173, includeTransactions: bool = False):
     """
-    Lists block beginning from a low hash (block id)
+    Lists blocks starting from a specified bluescore within the Kaspa blockDAG.
+    Note: This function interacts only with the Kaspad node and does not query the database.
     """
     response.headers["X-Data-Source"] = "Database"
 
@@ -256,7 +262,7 @@ def add_cache_control_for_block(block, response):
 
 async def get_transactions(blockId, transactionIds):
     """
-    Get the transactions associated with a block
+    Retrieves transactions associated with a specified block.
     """
     async with async_session() as s:
         transactions = (

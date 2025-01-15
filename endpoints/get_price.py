@@ -18,7 +18,7 @@ class PriceResponse(BaseModel):
 @mainnet_only
 async def get_price(stringOnly: bool = False):
     """
-    Returns the current price for Kaspa in USD.
+    Returns the current price for Kaspa in USD. Price info is from coingecko.com
     """
     price = await get_kas_price() if not DISABLE_PRICE else 0
     if stringOnly:
@@ -31,6 +31,6 @@ async def get_price(stringOnly: bool = False):
 @mainnet_only
 async def get_market_data():
     """
-    Returns market data for kaspa.
+    Returns market data for Kaspa.
     """
     return await get_kas_market_data() if not DISABLE_PRICE else {}

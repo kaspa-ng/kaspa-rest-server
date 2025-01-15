@@ -62,7 +62,7 @@ async def get_transactions_for_address(
     kaspaAddress: str = Path(description=f"Kaspa address as string e.g. {ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS),
 ):
     """
-    Get all transactions for a given address from database
+    Get a list of transaction IDs related to the specified Kaspa address.
     """
     # SELECT transactions_outputs.transaction_id, transactions_inputs.transaction_id as inp_transaction FROM transactions_outputs
     #
@@ -117,8 +117,9 @@ async def get_full_transactions_for_address(
     resolve_previous_outpoints: PreviousOutpointLookupMode = Query(default="no", description=DESC_RESOLVE_PARAM),
 ):
     """
-    Get all transactions for a given address from database.
-    And then get their related full transaction data
+    Get detailed transaction data for a Kaspa address, with
+    options to limit the number of results and include details of
+    previous transactions.
     """
 
     async with async_session() as s:
@@ -149,10 +150,10 @@ async def get_full_transactions_for_address_page(
     response: Response,
     kaspaAddress: str = Path(description=f"Kaspa address as string e.g. {ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS),
     limit: int = Query(
-        description="The max number of records to get. "
-        "For paging combine with using 'before' from oldest previous result, "
-        "repeat until an **empty** resultset is returned."
-        "The actual number of transactions returned can be higher if there are transactions with the same block time at the limit.",
+        description="Maximum number of records to retrieve. "
+        "To load more results, use the 'before' value from the last result, "
+        "and repeat until no more results are found. "
+        "Note: The number of transactions returned may be higher if multiple transactions share the same block time as the limit.",
         ge=1,
         le=500,
         default=50,
@@ -164,8 +165,9 @@ async def get_full_transactions_for_address_page(
     resolve_previous_outpoints: PreviousOutpointLookupMode = Query(default="no", description=DESC_RESOLVE_PARAM),
 ):
     """
-    Get all transactions for a given address from database.
-    And then get their related full transaction data
+    Get detailed transaction data for a Kaspa address from the database,
+    with options to set a limit, filter by block time
+    and include previous transaction details.
     """
 
     async with async_session() as s:
@@ -214,7 +216,7 @@ async def get_transaction_count_for_address(
     kaspaAddress: str = Path(description=f"Kaspa address as string e.g. {ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS),
 ):
     """
-    Count the number of transactions associated with this address
+    Get total number of transactions associated with the specified Kaspa address.
     """
 
     async with async_session() as s:
@@ -240,7 +242,7 @@ async def get_name_for_address(
     ),
 ):
     """
-    Get the name for an address
+    Get the name associated with the specified Kaspa address.
     """
     async with async_session() as s:
         r = (await s.execute(select(AddressKnown).filter(AddressKnown.address == kaspaAddress))).first()

@@ -17,12 +17,12 @@ async def get_marketcap(stringOnly: bool = False):
     """
     kas_price = await get_kas_price()
     resp = await kaspad_client.request("getCoinSupplyRequest")
-    mcap = round(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 100000000 * kas_price)
+    mcap = round(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 1e8 * kas_price)
 
     if not stringOnly:
         return {"marketcap": mcap}
     else:
-        if mcap < 1000000000:
-            return f"{round(mcap / 1000000, 1)}M"
+        if mcap < 1e9:
+            return f"{round(mcap / 1e6, 1)}M"
         else:
-            return f"{round(mcap / 1000000000, 1)}B"
+            return f"{round(mcap / 1e9, 1)}B"

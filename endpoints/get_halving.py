@@ -18,7 +18,7 @@ class HalvingResponse(BaseModel):
 @app.get("/info/halving", response_model=HalvingResponse | str, tags=["Kaspa network info"])
 async def get_halving(field: str | None = None):
     """
-    Returns information about chromatic halving
+    Returns information about chromatic halving.
     """
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     daa_score = int(resp["getBlockDagInfoResponse"]["virtualDaaScore"])
