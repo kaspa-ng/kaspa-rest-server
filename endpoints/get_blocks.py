@@ -1,5 +1,6 @@
 # encoding: utf-8
 import os
+import time
 from typing import List
 
 from fastapi import Query, Path, HTTPException
@@ -24,14 +25,14 @@ IS_SQL_DB_CONFIGURED = os.getenv("SQL_URI") is not None
 
 class VerboseDataModel(BaseModel):
     hash: str = "18c7afdf8f447ca06adb8b4946dc45f5feb1188c7d177da6094dfbc760eca699"
-    difficulty: float = (4102204523252.94,)
-    selectedParentHash: str = "580f65c8da9d436480817f6bd7c13eecd9223b37f0d34ae42fb17e1e9fda397e"
+    difficulty: float | None = (4102204523252.94,)
+    selectedParentHash: str | None = "580f65c8da9d436480817f6bd7c13eecd9223b37f0d34ae42fb17e1e9fda397e"
     transactionIds: List[str] | None = ["533f8314bf772259fe517f53507a79ebe61c8c6a11748d93a0835551233b3311"]
-    blueScore: str = "18483232"
+    blueScore: str | None = "18483232"
     childrenHashes: List[str] | None = None
-    mergeSetBluesHashes: List[str] = []
-    mergeSetRedsHashes: List[str] = []
-    isChainBlock: bool = False
+    mergeSetBluesHashes: List[str] | None = []
+    mergeSetRedsHashes: List[str] | None = []
+    isChainBlock: bool | None = False
 
 
 class ParentHashModel(BaseModel):
@@ -39,18 +40,18 @@ class ParentHashModel(BaseModel):
 
 
 class BlockHeader(BaseModel):
-    version: int = 1
-    hashMerkleRoot: str = "e6641454e16cff4f232b899564eeaa6e480b66069d87bee6a2b2476e63fcd887"
-    acceptedIdMerkleRoot: str = "9bab45b027a0b2b47135b6f6f866e5e4040fc1fdf2fe56eb0c90a603ce86092b"
-    utxoCommitment: str = "236d5f9ffd19b317a97693322c3e2ae11a44b5df803d71f1ccf6c2393bc6143c"
-    timestamp: str = "1656450648874"
-    bits: int = 455233226
-    nonce: str = "14797571275553019490"
-    daaScore: str = "19984482"
-    blueWork: str = "2d1b3f04f8a0dcd31"
-    parents: List[ParentHashModel]
-    blueScore: str = "18483232"
-    pruningPoint: str = "5d32a9403273a34b6551b84340a1459ddde2ae6ba59a47987a6374340ba41d5d"
+    version: int | None = 1
+    hashMerkleRoot: str | None = "e6641454e16cff4f232b899564eeaa6e480b66069d87bee6a2b2476e63fcd887"
+    acceptedIdMerkleRoot: str | None = "9bab45b027a0b2b47135b6f6f866e5e4040fc1fdf2fe56eb0c90a603ce86092b"
+    utxoCommitment: str | None = "236d5f9ffd19b317a97693322c3e2ae11a44b5df803d71f1ccf6c2393bc6143c"
+    timestamp: str | None = "1656450648874"
+    bits: int | None = 455233226
+    nonce: str | None = "14797571275553019490"
+    daaScore: str | None = "19984482"
+    blueWork: str | None = "2d1b3f04f8a0dcd31"
+    parents: List[ParentHashModel] | None
+    blueScore: str | None = "18483232"
+    pruningPoint: str | None = "5d32a9403273a34b6551b84340a1459ddde2ae6ba59a47987a6374340ba41d5d"
 
 
 class ExtraModel(BaseModel):
@@ -77,7 +78,12 @@ class BlockResponse(BaseModel):
 
 
 @app.get("/blocks/{blockId}", response_model=BlockModel, tags=["Kaspa blocks"])
-async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"), includeColor: bool = False):
+async def get_block(
+    response: Response,
+    blockId: str = Path(regex="[a-f0-9]{64}"),
+    includeTransactions: bool = True,
+    includeColor: bool = False,
+):
     """
     Get block information for a given block id
     """
@@ -95,14 +101,16 @@ async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"
 
         miner_payload = get_miner_payload_from_block(block)
         miner_info, miner_address = retrieve_miner_info_from_payload(miner_payload)
-
         block["extra"]["minerInfo"] = miner_info
         block["extra"]["minerAddress"] = miner_address
+
+        if not includeTransactions:
+            block["transactions"] = None
 
     else:
         if IS_SQL_DB_CONFIGURED:
             response.headers["X-Data-Source"] = "Database"
-            block = await get_block_from_db(blockId, True)
+            block = await get_block_from_db(blockId, includeTransactions)
             if block and includeColor:
                 if block["verboseData"]["isChainBlock"]:
                     block["extra"] = {"color": "blue"}
@@ -153,15 +161,31 @@ async def get_blocks_from_bluescore(response: Response, blueScore: int = 4367917
     return result
 
 
-async def get_block_from_db(blockId, includeTransactions):
+async def get_block_from_db(block_id, include_transactions):
     async with async_session() as s:
-        block = (await s.execute(block_join_query().where(Block.hash == blockId).limit(1))).first()
+        result = (await s.execute(block_join_query().where(Block.hash == block_id).limit(1))).first()
+        if result:
+            block, is_chain_block, parents, children, transaction_ids = result
+        else:
+            result = (
+                await s.execute(
+                    select(
+                        BlockTransaction.transaction_id.label("transaction_id"),
+                        Transaction.block_time.label("block_time"),
+                    )
+                    .join(Transaction, BlockTransaction.transaction_id == Transaction.transaction_id)
+                    .where(BlockTransaction.block_hash == block_id)
+                )
+            ).all()
+            if not result:
+                return None
+            block = Block(hash=block_id, timestamp=result[0].block_time)
+            is_chain_block = None
+            parents = []
+            children = []
+            transaction_ids = [row.transaction_id for row in result]
 
-    if block is None:
-        return None
-
-    block, is_chain_block, parents, children, transaction_ids = block
-    transactions = await get_transactions(block.hash, transaction_ids) if includeTransactions else None
+    transactions = await get_transactions(block.hash, transaction_ids) if include_transactions else None
     return map_block_from_db(block, is_chain_block, parents, children, transaction_ids, transactions)
 
 
@@ -209,22 +233,22 @@ def map_block_from_db(block, is_chain_block, parents, children, transaction_ids,
             "bits": block.bits,
             "nonce": block.nonce,
             "daaScore": block.daa_score,
-            "blueWork": block.blue_work,
-            "parents": [{"parentHashes": parents}] if parents else [],
+            "blueWork": block.blue_work if block.blue_work else 0,
+            "parents": [{"parentHashes": parents if parents else []}],
             "blueScore": block.blue_score,
             "pruningPoint": block.pruning_point,
         },
-        "transactions": transactions,
+        "transactions": transactions if transactions else [],
         "verboseData": {
             "hash": block.hash,
-            "difficulty": bits_to_difficulty(block.bits),
+            "difficulty": bits_to_difficulty(block.bits) if block.bits else None,
             "selectedParentHash": block.selected_parent_hash,
-            "transactionIds": transaction_ids,
+            "transactionIds": transaction_ids if transaction_ids else [],
             "blueScore": block.blue_score,
-            "childrenHashes": children,
+            "childrenHashes": children if children else [],
             "mergeSetBluesHashes": block.merge_set_blues_hashes or [],
             "mergeSetRedsHashes": block.merge_set_reds_hashes or [],
-            "isChainBlock": is_chain_block or False,
+            "isChainBlock": is_chain_block,
         },
     }
 
@@ -244,6 +268,13 @@ def block_join_query():
 def add_cache_control_for_block(block, response):
     if not block:
         raise HTTPException(status_code=404, detail="Block not found", headers={"Cache-Control": "public, max-age=3"})
+    if block["header"]["blueScore"] is None:
+        if int(block["header"]["timestamp"]) / 1000 > int(time.time()) - 60:
+            response.headers["Cache-Control"] = "public, max-age=2"
+        elif int(block["header"]["timestamp"]) / 1000 > int(time.time()) - 600:
+            response.headers["Cache-Control"] = "public, max-age=60"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=600"
     elif int(block["header"]["blueScore"]) > current_blue_score_data["blue_score"] - 20:
         response.headers["Cache-Control"] = "public, max-age=2"
     elif int(block["header"]["blueScore"]) > current_blue_score_data["blue_score"] - 60:
@@ -321,13 +352,15 @@ async def get_transactions(blockId, transactionIds):
                     if tx_out.transaction_id == tx.transaction_id
                 ],
                 "subnetworkId": sub.subnetwork_id,
+                "payload": tx.payload,
                 "verboseData": {
                     "transactionId": tx.transaction_id,
                     "hash": tx.hash,
-                    "mass": tx.mass,
+                    "computeMass": tx.mass,
                     "blockHash": blockId,
                     "blockTime": tx.block_time,
                 },
+                "mass": tx.mass,
             }
         )
     return tx_list
