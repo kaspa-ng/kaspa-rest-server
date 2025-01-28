@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from constants import BPS
 from dbsession import async_session
 from endpoints import sql_db_only
 from helper import KeyValueStore
@@ -70,8 +71,8 @@ async def get_max_hashrate():
         ).scalar()
 
     block_difficulty = bits_to_difficulty(block.bits)
-    hashrate_new = block_difficulty * 2
-    hashrate_old = maxhash_last_value.get("blockheader", {}).get("difficulty", 0) * 2
+    hashrate_new = block_difficulty * 2 * BPS
+    hashrate_old = maxhash_last_value.get("blockheader", {}).get("difficulty", 0) * 2 * BPS
 
     await KeyValueStore.set("maxhash_last_bluescore", str(block.blue_score))
 
