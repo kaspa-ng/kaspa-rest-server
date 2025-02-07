@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from constants import BPS
 from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from models.Block import Block
@@ -36,7 +37,7 @@ class HealthResponse(BaseModel):
 async def health_state():
     """
     Checks node and database health by comparing blue score and sync status.
-    Returns health details or 503 if the database lags by 1,000+ blocks or all nodes are not synced.
+    Returns health details or 503 if the database lags by ~10min or no nodes are synced.
     """
     current_blue_score_node = current_blue_score_data.get("blue_score")
 
@@ -49,7 +50,7 @@ async def health_state():
             db_check_status = DBCheckStatus(isSynced=False, blueScore=last_blue_score_db)
         else:
             blue_score_diff = abs(current_blue_score_node - last_blue_score_db)
-            isSynced = blue_score_diff < 1000
+            isSynced = blue_score_diff < 600 * BPS
             db_check_status = DBCheckStatus(
                 isSynced=isSynced, blueScore=last_blue_score_db, blueScoreDiff=blue_score_diff
             )
