@@ -1,6 +1,5 @@
 # encoding: utf-8
 import hashlib
-from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import HTTPException
@@ -8,7 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from dbsession import async_session
-from models.Transaction import Transaction
+from endpoints.get_virtual_chain_blue_score import current_blue_score_data
+from models.Block import Block
 from server import app, kaspad_client
 
 
@@ -18,40 +18,63 @@ class KaspadResponse(BaseModel):
     isUtxoIndexed: bool = True
     isSynced: bool = True
     p2pId: str = "1231312"
+    blueScore: int = 101065625
+
+
+class DBCheckStatus(BaseModel):
+    isSynced: bool = True
+    blueScore: int | None
+    blueScoreDiff: int | None
 
 
 class HealthResponse(BaseModel):
     kaspadServers: List[KaspadResponse]
+    database: DBCheckStatus
 
 
 @app.get("/info/health", response_model=HealthResponse, tags=["Kaspa network info"])
 async def health_state():
     """
-    Returns the current hashrate for Kaspa network in TH/s.
+    Checks node and database health by comparing blue score and sync status.
+    Returns health details or 503 if the database lags by 1,000+ blocks or all nodes are not synced.
     """
+    current_blue_score_node = current_blue_score_data.get("blue_score")
+
+    try:
+        async with async_session() as s:
+            last_blue_score_db = (
+                await s.execute(select(Block.blue_score).order_by(Block.blue_score.desc()).limit(1))
+            ).scalar()
+        if last_blue_score_db is None or current_blue_score_node is None:
+            db_check_status = DBCheckStatus(isSynced=False, blueScore=last_blue_score_db)
+        else:
+            blue_score_diff = abs(current_blue_score_node - last_blue_score_db)
+            isSynced = blue_score_diff < 1000
+            db_check_status = DBCheckStatus(
+                isSynced=isSynced, blueScore=last_blue_score_db, blueScoreDiff=blue_score_diff
+            )
+    except Exception:
+        db_check_status = DBCheckStatus(isSynced=False)
+
     await kaspad_client.initialize_all()
 
-    kaspads = []
+    kaspads = [
+        {
+            "kaspadHost": f"KASPAD_HOST_{i + 1}",
+            "serverVersion": kaspad.server_version,
+            "isUtxoIndexed": kaspad.is_utxo_indexed,
+            "isSynced": kaspad.is_synced,
+            "p2pId": hashlib.sha256(kaspad.p2p_id.encode()).hexdigest(),
+            "blueScore": current_blue_score_node,
+        }
+        for i, kaspad in enumerate(kaspad_client.kaspads)
+    ]
+    result = {
+        "kaspadServers": kaspads,
+        "database": db_check_status.dict(),
+    }
 
-    async with async_session() as s:
-        last_block_time = (
-            await s.execute(select(Transaction.block_time).limit(1).order_by(Transaction.block_time.desc()))
-        ).scalar()
+    if not db_check_status.isSynced or not any(kaspad["isSynced"] for kaspad in kaspads):
+        raise HTTPException(status_code=503, detail=result)
 
-    time_diff = datetime.now() - datetime.fromtimestamp(last_block_time / 1000)
-
-    if time_diff > timedelta(minutes=10):
-        raise HTTPException(status_code=500, detail="Transactions not up to date")
-
-    for i, kaspad_info in enumerate(kaspad_client.kaspads):
-        kaspads.append(
-            {
-                "isSynced": kaspad_info.is_synced,
-                "isUtxoIndexed": kaspad_info.is_utxo_indexed,
-                "p2pId": hashlib.sha256(kaspad_info.p2p_id.encode()).hexdigest(),
-                "kaspadHost": f"KASPAD_HOST_{i + 1}",
-                "serverVersion": kaspad_info.server_version,
-            }
-        )
-
-    return {"kaspadServers": kaspads}
+    return result

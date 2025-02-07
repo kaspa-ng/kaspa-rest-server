@@ -264,17 +264,30 @@ async def get_transactions(blockId, transactionIds):
                 select(Transaction, Subnetwork)
                 .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
                 .filter(Transaction.transaction_id.in_(transactionIds))
+                .order_by(Subnetwork.id)
             )
         ).all()
 
         tx_outputs = (
-            (await s.execute(select(TransactionOutput).where(TransactionOutput.transaction_id.in_(transactionIds))))
+            (
+                await s.execute(
+                    select(TransactionOutput)
+                    .where(TransactionOutput.transaction_id.in_(transactionIds))
+                    .order_by(TransactionOutput.index)
+                )
+            )
             .scalars()
             .all()
         )
 
         tx_inputs = (
-            (await s.execute(select(TransactionInput).where(TransactionInput.transaction_id.in_(transactionIds))))
+            (
+                await s.execute(
+                    select(TransactionInput)
+                    .where(TransactionInput.transaction_id.in_(transactionIds))
+                    .order_by(TransactionInput.index)
+                )
+            )
             .scalars()
             .all()
         )

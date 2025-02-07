@@ -25,6 +25,7 @@ class KaspadClient(object):
             return info
 
         except Exception:
+            self.is_synced = False
             return False
 
     async def request(self, command, params=None, timeout=5):

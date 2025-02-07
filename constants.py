@@ -1,5 +1,7 @@
 import os
 
+DISABLE_LIMITS = os.getenv("DISABLE_LIMITS", "false").lower() == "true"
+
 NETWORK_TYPE = os.getenv("NETWORK_TYPE", "mainnet").lower()
 BPS = os.getenv("BPS", "1")
 
