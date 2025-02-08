@@ -70,7 +70,8 @@ class TxModel(BaseModel):
 
 
 class TxSearch(BaseModel):
-    transactionIds: List[str]
+    transactionIds: List[str] | None
+    acceptingBlueScore: int | None
 
 
 class PreviousOutpointLookupMode(str, Enum):
@@ -210,14 +211,19 @@ async def search_for_transactions(
     ),
 ):
     """
-    Get block information for a given block id
+    Search for transactions by transactionIds or acceptingBlueScore
     """
-    if len(txSearch.transactionIds) > 1000:
-        raise HTTPException(422, "Too many transaction ids")
+    if not txSearch.transactionIds and not txSearch.acceptingBlueScore:
+        raise HTTPException(422, "Either transactionIds or acceptingBlueScore must be provided")
 
-    if resolve_previous_outpoints in ["light", "full"] and len(txSearch.transactionIds) > 50:
-        raise HTTPException(422, "Temporary issue: Transaction ids count is limited to 50 for light and full searches.")
+    if txSearch.transactionIds:
+        if len(txSearch.transactionIds) > 1000:
+            raise HTTPException(422, "Too many transaction ids")
 
+        if resolve_previous_outpoints in ["light", "full"] and len(txSearch.transactionIds) > 50:
+            raise HTTPException(422, "Temporary issue: Transaction ids count is limited to 50 for light and full searches.")
+
+    results_limit = 50 if resolve_previous_outpoints in ["light", "full"] else 1000
     fields = fields.split(",") if fields else []
 
     async with async_session() as s:
@@ -234,8 +240,10 @@ async def search_for_transactions(
                 TransactionAcceptance, Transaction.transaction_id == TransactionAcceptance.transaction_id, isouter=True
             )
             .join(Block, TransactionAcceptance.block_hash == Block.hash, isouter=True)
-            .filter(Transaction.transaction_id.in_(txSearch.transactionIds))
+            .filter(Transaction.transaction_id.in_(txSearch.transactionIds) if txSearch.transactionIds else True)
+            .filter(Block.blue_score == txSearch.acceptingBlueScore if txSearch.acceptingBlueScore else True)
             .order_by(Transaction.block_time.desc())
+            .limit(results_limit)
         )
 
         tx_list = tx_list.all()
