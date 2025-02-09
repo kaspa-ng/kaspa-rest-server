@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from constants import BPS
-from dbsession import async_session
+from dbsession import async_session_blocks
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from models.Block import Block
 from server import app, kaspad_client
@@ -42,7 +42,7 @@ async def health_state():
     current_blue_score_node = current_blue_score_data.get("blue_score")
 
     try:
-        async with async_session() as s:
+        async with async_session_blocks() as s:
             last_blue_score_db = (
                 await s.execute(select(Block.blue_score).order_by(Block.blue_score.desc()).limit(1))
             ).scalar()
