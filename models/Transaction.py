@@ -45,3 +45,11 @@ class TransactionInput(Base):
     previous_outpoint_index = Column(SmallInteger)
     signature_script = Column(HexColumn)
     sig_op_count = Column(SmallInteger)
+    previous_outpoint_script = Column(HexColumn)
+    previous_outpoint_amount = Column(BigInteger)
+
+    @property
+    def previous_outpoint_address(self):
+        if self.previous_outpoint_script:
+            return to_address(ADDRESS_PREFIX, self.previous_outpoint_script)
+        return None
