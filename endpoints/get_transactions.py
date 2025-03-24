@@ -53,7 +53,7 @@ class TxInput(BaseModel):
     previous_outpoint_address: str | None
     previous_outpoint_amount: int | None
     signature_script: str | None
-    sig_op_count: str | None
+    sig_op_count: int | None
 
     class Config:
         orm_mode = True
@@ -63,7 +63,7 @@ class TxModel(BaseModel):
     subnetwork_id: str | None
     transaction_id: str | None
     hash: str | None
-    mass: str | None
+    mass: int | None
     payload: str | None
     block_hash: List[str] | None
     block_time: int | None

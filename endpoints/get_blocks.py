@@ -56,6 +56,54 @@ class BlockHeader(BaseModel):
     pruningPoint: str | None = "5d32a9403273a34b6551b84340a1459ddde2ae6ba59a47987a6374340ba41d5d"
 
 
+class BlockTxInputPreviousOutpointModel(BaseModel):
+    transactionId: str
+    index: int
+
+
+class BlockTxInputModel(BaseModel):
+    previousOutpoint: BlockTxInputPreviousOutpointModel | None
+    signatureScript: str | None
+    sigOpCount: int | None
+    sequence: int | None
+
+
+class BlockTxOutputScriptPublicKeyModel(BaseModel):
+    scriptPublicKey: str | None
+    version: int | None
+
+
+class BlockTxOutputVerboseDataModel(BaseModel):
+    scriptPublicKeyType: str | None
+    scriptPublicKeyAddress: str | None
+
+
+class BlockTxOutputModel(BaseModel):
+    amount: int | None
+    scriptPublicKey: BlockTxOutputScriptPublicKeyModel | None
+    verboseData: BlockTxOutputVerboseDataModel | None
+
+
+class BlockTxVerboseDataModel(BaseModel):
+    transactionId: str
+    hash: str | None
+    computeMass: int | None
+    blockHash: str | None
+    blockTime: int | None
+
+
+class BlockTxModel(BaseModel):
+    inputs: List[BlockTxInputModel] | None
+    outputs: List[BlockTxOutputModel] | None
+    subnetworkId: str | None
+    payload: str | None
+    verboseData: BlockTxVerboseDataModel
+    lockTime: int | None
+    gas: int | None
+    mass: int | None
+    version: int | None
+
+
 class ExtraModel(BaseModel):
     color: str | None = None
     minerAddress: str | None = None
@@ -64,7 +112,7 @@ class ExtraModel(BaseModel):
 
 class BlockModel(BaseModel):
     header: BlockHeader
-    transactions: list | None
+    transactions: List[BlockTxModel] | None
     verboseData: VerboseDataModel
     extra: ExtraModel | None
 
