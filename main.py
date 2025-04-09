@@ -24,6 +24,7 @@ from endpoints.get_health import health_state
 from endpoints.get_marketcap import get_marketcap
 from endpoints.get_transaction_mass import calculate_transaction_mass
 from endpoints.get_transactions import get_transaction
+from endpoints.get_virtual_chain import get_virtual_chain_transactions
 from endpoints.get_virtual_chain_blue_score import (
     get_virtual_selected_parent_blue_score,
 )
@@ -38,7 +39,7 @@ IS_SQL_DB_CONFIGURED = os.getenv("SQL_URI") is not None
 print(
     f"Loaded: {get_balance}, {get_utxos}, {get_blocks}, {get_blockdag}, {get_circulating_supply}, "
     f"{get_kaspad_info}, {get_network}, {get_fee_estimate}, {get_marketcap}, {get_hashrate}, {get_blockreward}"
-    f"{get_halving} {health_state} {get_transaction}"
+    f"{get_halving} {health_state} {get_transaction} {get_virtual_chain_transactions}"
     f"{get_virtual_selected_parent_blue_score} {get_addresses_active}"
     f"{submit_a_new_transaction} {calculate_transaction_mass} {get_price} {get_balances_from_kaspa_addresses}"
 )
