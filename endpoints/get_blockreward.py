@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+from constants import BPS
 from helper.deflationary_table import DEFLATIONARY_TABLE
 from server import app, kaspad_client
 
@@ -21,7 +22,7 @@ async def get_blockreward(stringOnly: bool = False):
     reward = 0
 
     for to_break_score in sorted(DEFLATIONARY_TABLE):
-        reward = DEFLATIONARY_TABLE[to_break_score]
+        reward = DEFLATIONARY_TABLE[to_break_score] / BPS
         if daa_score < to_break_score:
             break
 
