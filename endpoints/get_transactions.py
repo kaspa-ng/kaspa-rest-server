@@ -360,7 +360,7 @@ async def get_tx_inputs_from_db(fields, resolve_previous_outpoints, transaction_
                     & (TransactionOutput.index == TransactionInput.previous_outpoint_index),
                 )
                 .filter(TransactionInput.transaction_id.in_(transaction_ids))
-                .order_by(TransactionInput.transaction_id, TransactionInput.index)
+                .order_by(TransactionInput.index)
             )
             for tx_input, tx_prev_output in tx_inputs.all():
                 if tx_prev_output:
@@ -378,7 +378,7 @@ async def get_tx_inputs_from_db(fields, resolve_previous_outpoints, transaction_
             tx_inputs = await session.execute(
                 select(TransactionInput)
                 .filter(TransactionInput.transaction_id.in_(transaction_ids))
-                .order_by(TransactionInput.transaction_id, TransactionInput.index)
+                .order_by(TransactionInput.index)
             )
             for tx_input in tx_inputs.scalars().all():
                 tx_inputs_dict[tx_input.transaction_id].append(tx_input)
@@ -394,7 +394,7 @@ async def get_tx_outputs_from_db(fields, transaction_ids):
         tx_outputs = await session.execute(
             select(TransactionOutput)
             .filter(TransactionOutput.transaction_id.in_(transaction_ids))
-            .order_by(TransactionOutput.transaction_id, TransactionOutput.index)
+            .order_by(TransactionOutput.index)
         )
         for tx_output in tx_outputs.scalars().all():
             tx_outputs_dict[tx_output.transaction_id].append(tx_output)
