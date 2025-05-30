@@ -1,7 +1,10 @@
 # encoding: utf-8
+from asyncio import wait_for
 
 from fastapi import HTTPException
 from typing import List
+
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 from pydantic import BaseModel
 
@@ -26,7 +29,13 @@ async def get_fee_estimate():
     Given a feerate value recommendation, calculate the required fee by
     taking the transaction mass and multiplying it by feerate: `fee = feerate * mass(tx)`
     """
-    resp = await kaspad_client.request("getFeeEstimateRequest")
-    if resp is None:
-        raise HTTPException(status_code=501, detail="Kaspad does not support fee estimate")
-    return resp["getFeeEstimateResponse"]["estimate"]
+    rpc_client = await kaspad_rpc_client()
+    if rpc_client:
+        fee_estimate = await wait_for(rpc_client.get_fee_estimate(), 10)
+    else:
+        resp = await kaspad_client.request("getFeeEstimateRequest")
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        fee_estimate = resp["getFeeEstimateResponse"]
+
+    return fee_estimate["estimate"]

@@ -1,7 +1,10 @@
 # encoding: utf-8
+from asyncio import wait_for
 
+from fastapi import HTTPException
 from pydantic import BaseModel
 
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 from fastapi.responses import PlainTextResponse
 
@@ -11,16 +14,23 @@ class CoinSupplyResponse(BaseModel):
     maxSupply: str = "2900000000000000000"
 
 
-@app.get("/info/coinsupply", response_model=CoinSupplyResponse, tags=["Kaspa network info"])
+@app.get("/info/coinsupply", tags=["Kaspa network info"])
 async def get_coinsupply():
     """
     Get $KAS coin supply information
     """
-    resp = await kaspad_client.request("getCoinSupplyRequest")
+    rpc_client = await kaspad_rpc_client()
+    if rpc_client:
+        coin_supply = await wait_for(rpc_client.get_coin_supply(), 10)
+    else:
+        resp = await kaspad_client.request("getCoinSupplyRequest")
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        coin_supply = resp["getCoinSupplyResponse"]
+
     return {
-        "circulatingSupply": resp["getCoinSupplyResponse"]["circulatingSompi"],
-        "totalSupply": resp["getCoinSupplyResponse"]["circulatingSompi"],
-        "maxSupply": resp["getCoinSupplyResponse"]["maxSompi"],
+        "circulatingSupply": coin_supply["circulatingSompi"],
+        "maxSupply": coin_supply["maxSompi"],
     }
 
 
@@ -29,8 +39,8 @@ async def get_circulating_coins(in_billion: bool = False):
     """
     Get circulating amount of $KAS token as numerical value
     """
-    resp = await kaspad_client.request("getCoinSupplyRequest")
-    coins = str(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 100000000)
+    coin_supply = await get_coinsupply()
+    coins = str(float(coin_supply["circulatingSupply"]) / 100000000)
     if in_billion:
         return str(round(float(coins) / 1000000000, 2))
     else:
@@ -38,9 +48,8 @@ async def get_circulating_coins(in_billion: bool = False):
 
 
 @app.get("/info/coinsupply/total", tags=["Kaspa network info"], response_class=PlainTextResponse)
-async def get_total_coins():
+async def get_total_coins(in_billion: bool = False):
     """
     Get total amount of $KAS token as numerical value
     """
-    resp = await kaspad_client.request("getCoinSupplyRequest")
-    return str(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 100000000)
+    return await get_circulating_coins(in_billion)

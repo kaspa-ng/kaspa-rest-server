@@ -825,6 +825,26 @@ files = [
 ]
 
 [[package]]
+name = "kaspa"
+version = "1.0.0"
+description = "Kaspa Python SDK"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "kaspa-1.0.0-cp310-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:2270ce14f8c3806b226c732d67d9e77a8a1b717bf938cdc95c3acfbeb69a7f24"},
+    {file = "kaspa-1.0.0-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:d5eb2083870259a299868c3b14839daf6e917418f3239def77ebc47be4ccd8b6"},
+    {file = "kaspa-1.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:c95718395d24c749a76822b74bf425d78379d6cba3a85d97742b6ebc334deb14"},
+    {file = "kaspa-1.0.0-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:c2614e5e717083d8eb9eba788b84363df53a6990958bdfd5bbf96d049f2b7592"},
+    {file = "kaspa-1.0.0-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:558f01b32b93f9fdbea1e84a63d6546693d7261a9d13251bf4016977e589a25f"},
+    {file = "kaspa-1.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0878d402accfebd69f8e02d8385dfcdc42f2ee78e44dd7686da0df02aef64768"},
+    {file = "kaspa-1.0.0-cp312-cp312-manylinux_2_34_aarch64.whl", hash = "sha256:c8a3153af9c2c8676aaa6c1a536c06c8331ad190a6f03654f36b59d300e44986"},
+    {file = "kaspa-1.0.0-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:6ee18fbebdb3b7c7b970db8146f0574b4778c81d1af344a93425733cf78b6bbf"},
+    {file = "kaspa-1.0.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:86d10d4a374b4a4f26c63802c6a87d9c9baf2c0f3aa1f54a4a75b49003cd25ef"},
+    {file = "kaspa-1.0.0.tar.gz", hash = "sha256:c2710396c6a78d69dbb6e2944890267d8d034ea8d6111f7ef0fb5dd53557b18f"},
+]
+
+[[package]]
 name = "kaspa-script-address"
 version = "0.0.1"
 description = ""
@@ -832,9 +852,9 @@ optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
+    {file = "kaspa_script_address-0.0.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d366461bc7bfb068fb8a03a360dcc1d150122aa03f2f2a67e6c4da7d025b9a59"},
     {file = "kaspa_script_address-0.0.1-cp310-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:f0af75d2fe4b951e41801117656045079a504b9b3599a126155e4877b3f31a72"},
     {file = "kaspa_script_address-0.0.1-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:a5661a9cdf74b020919d91d482b0279624db31e0a2523d70f16426c8146801b8"},
-    {file = "kaspa_script_address-0.0.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d366461bc7bfb068fb8a03a360dcc1d150122aa03f2f2a67e6c4da7d025b9a59"},
     {file = "kaspa_script_address-0.0.1.tar.gz", hash = "sha256:f14b81ac1f31edaa1480ac11e659e0a51ebf74d1d68e29af96ab25c0a4f34777"},
 ]
 
@@ -1689,4 +1709,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "17c7342f297086095ff8f001d446c9d8007e67e446199e8c5b61dd38c7a8684e"
+content-hash = "d2a0bc7fd0e865b539b8d2a444e1bfa701601e4bc7f9b32a215f21cdf8ec327e"

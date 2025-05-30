@@ -1,5 +1,6 @@
 # encoding: utf-8
 import re
+from asyncio import wait_for
 from typing import List
 
 from fastapi import Path, HTTPException
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 from starlette.responses import Response
 
 from constants import REGEX_KASPA_ADDRESS, ADDRESS_EXAMPLE
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 
@@ -51,23 +53,18 @@ async def get_utxos_for_address(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid address: {kaspaAddress}")
 
-    resp = await kaspad_client.request("getUtxosByAddressesRequest", params={"addresses": [kaspaAddress]}, timeout=120)
-    try:
-        if "getUtxosByAddressesResponse" in resp and "error" in resp["getUtxosByAddressesResponse"]:
-            raise HTTPException(status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"])
+    utxos = await get_utxos([kaspaAddress])
 
-        ttl = 8
-        if len(resp["getUtxosByAddressesResponse"]["entries"]) > 100_000:
-            ttl = 3600
-        elif len(resp["getUtxosByAddressesResponse"]["entries"]) > 10_000:
-            ttl = 600
-        elif len(resp["getUtxosByAddressesResponse"]["entries"]) > 1_000:
-            ttl = 20
+    ttl = 8
+    if len(utxos) > 100_000:
+        ttl = 3600
+    elif len(utxos) > 10_000:
+        ttl = 600
+    elif len(utxos) > 1_000:
+        ttl = 20
 
-        response.headers["Cache-Control"] = f"public, max-age={ttl}"
-        return (utxo for utxo in resp["getUtxosByAddressesResponse"]["entries"] if utxo["address"] == kaspaAddress)
-    except KeyError:
-        return []
+    response.headers["Cache-Control"] = f"public, max-age={ttl}"
+    return (utxo for utxo in utxos if utxo["address"] == kaspaAddress)
 
 
 class UtxoRequest(BaseModel):
@@ -95,11 +92,23 @@ async def get_utxos_for_addresses(body: UtxoRequest):
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid address: {kaspaAddress}")
 
-    resp = await kaspad_client.request("getUtxosByAddressesRequest", params={"addresses": body.addresses}, timeout=120)
-    try:
-        if "getUtxosByAddressesResponse" in resp and "error" in resp["getUtxosByAddressesResponse"]:
-            raise HTTPException(status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"])
+    return await get_utxos(body.addresses)
 
-        return (utxo for utxo in resp["getUtxosByAddressesResponse"]["entries"])
-    except KeyError:
-        return []
+
+async def get_utxos(addresses):
+    rpc_client = await kaspad_rpc_client()
+    request = {"addresses": addresses}
+    if rpc_client:
+        utxos = await wait_for(rpc_client.get_utxos_by_addresses(request), 60)
+        for utxo in utxos["entries"]:
+            spk = utxo["utxoEntry"]["scriptPublicKey"].lstrip("0")
+            if len(spk) % 2 == 1:
+                spk = "0" + spk
+            utxo["utxoEntry"]["scriptPublicKey"] = {"scriptPublicKey": spk}
+    else:
+        resp = await kaspad_client.request("getUtxosByAddressesRequest", request, timeout=60)
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        utxos = resp["getUtxosByAddressesResponse"]
+
+    return utxos["entries"]

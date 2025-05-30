@@ -2,8 +2,9 @@
 
 from pydantic import BaseModel
 
+from endpoints.get_circulating_supply import get_coinsupply
 from helper import get_kas_price
-from server import app, kaspad_client
+from server import app
 
 
 class MarketCapResponse(BaseModel):
@@ -16,8 +17,8 @@ async def get_marketcap(stringOnly: bool = False):
     Get $KAS price and market cap. Price info is from coingecko.com
     """
     kas_price = await get_kas_price()
-    resp = await kaspad_client.request("getCoinSupplyRequest")
-    mcap = round(float(resp["getCoinSupplyResponse"]["circulatingSompi"]) / 100000000 * kas_price)
+    coin_supply = await get_coinsupply()
+    mcap = round(float(coin_supply["circulatingSupply"]) / 100000000 * kas_price)
 
     if not stringOnly:
         return {"marketcap": mcap}

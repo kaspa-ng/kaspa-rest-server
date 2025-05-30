@@ -1,9 +1,11 @@
 # encoding: utf-8
+from asyncio import wait_for
 from typing import List
 
 from fastapi import HTTPException
 from pydantic import BaseModel
 
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 
@@ -27,13 +29,12 @@ async def get_virtual_selected_parent_chain_from_block(startHash: str, includeAc
     GetVirtualSelectedParentChainFromBlockRequestMessage requests the virtual selected parent chain from
     some startHash to this kaspad's current virtual.
     """
-    resp = await kaspad_client.request(
-        "getVirtualChainFromBlockRequest",
-        params={"startHash": startHash, "includeAcceptedTransactionIds": includeAcceptedTransactionIds},
-    )
-    resp = resp["getVirtualChainFromBlockResponse"]
-
-    if resp.get("error"):
-        raise HTTPException(400, detail=resp.get("error").get("message"))
-
-    return resp
+    rpc_client = await kaspad_rpc_client()
+    request = {"startHash": startHash, "includeAcceptedTransactionIds": includeAcceptedTransactionIds}
+    if rpc_client:
+        return await wait_for(rpc_client.get_virtual_chain_from_block(request), 60)
+    else:
+        resp = await kaspad_client.request("getVirtualChainFromBlockRequest", request)
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        return resp["getVirtualChainFromBlockResponse"]

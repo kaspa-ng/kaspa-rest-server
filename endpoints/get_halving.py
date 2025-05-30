@@ -5,8 +5,9 @@ from pydantic import BaseModel
 from starlette.responses import PlainTextResponse
 
 from constants import BPS
+from endpoints.get_blockdag import get_blockdag
 from helper.deflationary_table import calc_block_reward
-from server import app, kaspad_client
+from server import app
 
 
 class HalvingResponse(BaseModel):
@@ -20,8 +21,8 @@ async def get_halving(field: str | None = None):
     """
     Returns information about chromatic halving
     """
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    daa_score = int(resp["getBlockDagInfoResponse"]["virtualDaaScore"])
+    bdi = await get_blockdag()
+    daa_score = int(bdi["virtualDaaScore"])
 
     reward_info = calc_block_reward(daa_score)
 

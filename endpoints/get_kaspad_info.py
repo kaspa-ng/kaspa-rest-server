@@ -1,8 +1,11 @@
 # encoding: utf-8
 import hashlib
+from asyncio import wait_for
 
+from fastapi import HTTPException
 from pydantic import BaseModel
 
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 
@@ -19,7 +22,15 @@ async def get_kaspad_info():
     """
     Get some information for kaspad instance, which is currently connected.
     """
-    resp = await kaspad_client.request("getInfoRequest")
-    p2p_id = resp["getInfoResponse"].pop("p2pId")
-    resp["getInfoResponse"]["p2pIdHashed"] = hashlib.sha256(p2p_id.encode()).hexdigest()
-    return resp["getInfoResponse"]
+    rpc_client = await kaspad_rpc_client()
+    if rpc_client:
+        info = await wait_for(rpc_client.get_info(), 10)
+    else:
+        resp = await kaspad_client.request("getInfoRequest")
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        info = resp["getInfoResponse"]
+
+    p2p_id = info.pop("p2pId")
+    info["p2pIdHashed"] = hashlib.sha256(p2p_id.encode()).hexdigest()
+    return info

@@ -1,10 +1,13 @@
 # encoding: utf-8
+from asyncio import wait_for
 from typing import List
 
 from fastapi import HTTPException
+from kaspa_script_address import to_script
 from pydantic import BaseModel
 
 from constants import ADDRESS_EXAMPLE
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 
@@ -20,19 +23,25 @@ class BalanceRequest(BaseModel):
 @app.post("/addresses/balances", response_model=List[BalancesByAddressEntry], tags=["Kaspa addresses"])
 async def get_balances_from_kaspa_addresses(body: BalanceRequest):
     """
-    Get balance for a given kaspa address
+    Get balances for multiple kaspa addresses
     """
-    resp = await kaspad_client.request("getBalancesByAddressesRequest", params={"addresses": body.addresses})
+    if not body.addresses:
+        return []
 
-    try:
-        resp = resp["getBalancesByAddressesResponse"]
-    except KeyError:
-        if "getUtxosByAddressesResponse" in resp and "error" in resp["getUtxosByAddressesResponse"]:
-            raise HTTPException(status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"])
-        else:
-            raise
+    for kaspaAddress in body.addresses:
+        try:
+            to_script(kaspaAddress)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid address: {kaspaAddress}")
 
-    if resp.get("error"):
-        raise HTTPException(500, resp["error"])
+    rpc_client = await kaspad_rpc_client()
+    request = {"addresses": body.addresses}
+    if rpc_client:
+        balances = await wait_for(rpc_client.get_balances_by_addresses(request), 10)
+    else:
+        resp = await kaspad_client.request("getBalancesByAddressesRequest", request)
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        balances = resp["getBalancesByAddressesResponse"]
 
-    return resp["entries"]
+    return balances["entries"]

@@ -1,6 +1,7 @@
 # encoding: utf-8
 import logging
 import os
+from asyncio import wait_for
 from typing import List
 
 from fastapi import Query, Path, HTTPException
@@ -14,6 +15,7 @@ from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from helper.difficulty_calculation import bits_to_difficulty
 from helper.mining_address import get_miner_payload_from_block, retrieve_miner_info_from_payload
 from helper.utils import add_cache_control
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from models.Block import Block
 from models.BlockParent import BlockParent
 from models.BlockTransaction import BlockTransaction
@@ -139,41 +141,26 @@ async def get_block(
     """
     Get block information for a given block id
     """
-    resp = await kaspad_client.request("getBlockRequest", params={"hash": blockId, "includeTransactions": True})
-    block = None
-    if not resp.get("getBlockResponse", {}).get("block", {}).get("verboseData", {}).get("isHeaderOnly", True):
-        logging.debug(f"Found block {blockId} in kaspad")
-        block = resp["getBlockResponse"]["block"]
-
-        block["extra"] = {}
-        if block and includeColor:
-            if block["verboseData"]["isChainBlock"]:
-                block["extra"] = {"color": "blue"}
-            else:
-                block["extra"]["color"] = await get_block_color_from_kaspad(block)
-
+    block = await get_block_from_kaspad(blockId, includeTransactions, includeColor)
+    if not block and IS_SQL_DB_CONFIGURED:
+        response.headers["X-Data-Source"] = "Database"
+        block = await get_block_from_db(blockId, includeTransactions)
+        if block:
+            logging.debug(f"Found block {blockId} in database")
+            if includeColor:
+                if block["verboseData"]["isChainBlock"]:
+                    block["extra"] = {"color": "blue"}
+                else:
+                    block["extra"] = {"color": await get_block_color_from_db(block)}
+    if block:
         miner_payload = get_miner_payload_from_block(block)
         if miner_payload:
             miner_info, miner_address = retrieve_miner_info_from_payload(miner_payload)
             block["extra"]["minerInfo"] = miner_info
             block["extra"]["minerAddress"] = miner_address
-
         if not includeTransactions:
             block["transactions"] = None
-
     else:
-        if IS_SQL_DB_CONFIGURED:
-            response.headers["X-Data-Source"] = "Database"
-            block = await get_block_from_db(blockId, includeTransactions)
-            if block:
-                logging.debug(f"Found block {blockId} in database")
-                if includeColor:
-                    if block["verboseData"]["isChainBlock"]:
-                        block["extra"] = {"color": "blue"}
-                    else:
-                        block["extra"] = {"color": await get_block_color_from_db(block)}
-
-    if not block:
         raise HTTPException(status_code=404, detail="Block not found", headers={"Cache-Control": "public, max-age=8"})
 
     add_cache_control(block.get("header", {}).get("blueScore"), block.get("header", {}).get("timestamp"), response)
@@ -192,11 +179,19 @@ async def get_blocks(
     """
     response.headers["Cache-Control"] = "public, max-age=3"
 
-    resp = await kaspad_client.request(
-        "getBlocksRequest",
-        params={"lowHash": lowHash, "includeBlocks": includeBlocks, "includeTransactions": includeTransactions},
-    )
-    return resp["getBlocksResponse"]
+    rpc_client = await kaspad_rpc_client()
+    request = {"lowHash": lowHash, "includeBlocks": includeBlocks, "includeTransactions": includeTransactions}
+    if rpc_client:
+        try:
+            resp = await wait_for(rpc_client.get_blocks(request), 60)
+            for block in resp.get("blocks", []):
+                convert_to_legacy_block(block)
+            return resp
+        except Exception:
+            return {"blockHashes": [], "blocks": []}
+    else:
+        resp = await kaspad_client.request("getBlocksRequest", request)
+        return resp["getBlocksResponse"]
 
 
 @app.get("/blocks-from-bluescore", response_model=List[BlockModel], tags=["Kaspa blocks"])
@@ -221,11 +216,9 @@ async def get_blocks_from_bluescore(response: Response, blueScore: int = 4367917
 
         result = []
         for block_hash in block_hashes:
-            resp = await kaspad_client.request(
-                "getBlockRequest", params={"hash": block_hash, "includeTransactions": includeTransactions}
-            )
-            if not resp.get("getBlockResponse", {}).get("block", {}).get("verboseData", {}).get("isHeaderOnly", True):
-                result.append(resp["getBlockResponse"]["block"])  # Block found in kaspad and is not headerOnly
+            block = await get_block_from_kaspad(block_hash, includeTransactions, False)
+            if block:
+                result.append(block)
         if result:
             return result
 
@@ -243,9 +236,33 @@ async def get_blocks_from_bluescore(response: Response, blueScore: int = 4367917
     return result
 
 
-async def get_block_from_db(block_id, include_transactions):
+async def get_block_from_kaspad(block_hash, include_transactions, include_color):
+    rpc_client = await kaspad_rpc_client()
+    request = {"hash": block_hash, "includeTransactions": include_transactions}
+    if rpc_client:
+        try:
+            resp = await wait_for(rpc_client.get_block(request), 10)
+            block = convert_to_legacy_block(resp.get("block", {}))
+            logging.debug(f"Found block in kaspad (wrpc): {block_hash}")
+        except Exception:
+            block = {}
+    else:
+        resp = await kaspad_client.request("getBlockRequest", request)
+        block = resp.get("getBlockResponse", {}).get("block", {})
+        logging.debug(f"Found block in kaspad (grpc): {block_hash}")
+    if not block.get("verboseData", {}).get("isHeaderOnly", True):
+        block["extra"] = {}
+        if include_color:
+            if block["verboseData"]["isChainBlock"]:
+                block["extra"]["color"] = "blue"
+            else:
+                block["extra"]["color"] = await get_block_color_from_kaspad(block["verboseData"]["hash"])
+        return block
+
+
+async def get_block_from_db(block_hash, include_transactions):
     async with async_session_blocks() as s:
-        result = (await s.execute(block_join_query().where(Block.hash == block_id).limit(1))).first()
+        result = (await s.execute(block_join_query().where(Block.hash == block_hash).limit(1))).first()
 
     if result:
         block, is_chain_block, parents, children, transaction_ids = result
@@ -258,12 +275,12 @@ async def get_block_from_db(block_id, include_transactions):
                         Transaction.block_time.label("block_time"),
                     )
                     .join(Transaction, BlockTransaction.transaction_id == Transaction.transaction_id)
-                    .where(BlockTransaction.block_hash == block_id)
+                    .where(BlockTransaction.block_hash == block_hash)
                 )
             ).all()
             if not result:
                 return None
-            block = Block(hash=block_id, timestamp=result[0].block_time)
+            block = Block(hash=block_hash, timestamp=result[0].block_time)
             is_chain_block = None
             parents = []
             children = []
@@ -275,13 +292,19 @@ async def get_block_from_db(block_id, include_transactions):
     return map_block_from_db(block, is_chain_block, parents, children, transaction_ids, transactions)
 
 
-async def get_block_color_from_kaspad(block):
-    blockId = block["verboseData"]["hash"]
-    resp = await kaspad_client.request("getCurrentBlockColorRequest", params={"hash": blockId})
-    if "blue" in resp["getCurrentBlockColorResponse"]:
-        return "blue" if resp["getCurrentBlockColorResponse"]["blue"] is True else "red"
+async def get_block_color_from_kaspad(block_hash):
+    rpc_client = await kaspad_rpc_client()
+    request = {"hash": block_hash}
+    if rpc_client:
+        try:
+            resp = await wait_for(rpc_client.get_current_block_color(request), 10)
+        except Exception:
+            resp = {}
     else:
-        return None
+        resp = await kaspad_client.request("getCurrentBlockColorRequest", request)
+        resp = resp.get("getCurrentBlockColorResponse", {})
+    if resp.get("blue"):
+        return "blue" if resp["blue"] is True else "red"
 
 
 async def get_block_color_from_db(block):
@@ -431,3 +454,32 @@ async def get_transactions(blockId, transactionIds):
             }
         )
     return tx_list
+
+
+def convert_to_legacy_block(block: dict) -> dict:
+    header = block.get("header", {})
+    header["blueWork"] = header["blueWork"].lstrip("0") if header.get("blueWork") else None
+
+    parents = []
+    for level in header.get("parentsByLevel", []):
+        parents.append({"parentHashes": level})
+    header["parents"] = parents
+
+    for tx in block.get("transactions", []):
+        for tx_output in tx.get("outputs", []):
+            tx_output["amount"] = tx_output.get("value")
+            tx_output_script_public_key = tx_output.get("scriptPublicKey")
+            if tx_output_script_public_key:
+                tx_output_script_public_key = tx_output_script_public_key.lstrip("0")
+                if len(tx_output_script_public_key) % 2 == 1:
+                    tx_output_script_public_key = "0" + tx_output_script_public_key
+                tx_output["scriptPublicKey"] = {
+                    "scriptPublicKey": tx_output_script_public_key,
+                    "version": 0,
+                }
+            tx_output_verbose_data = tx_output.get("verboseData")
+            if tx_output_verbose_data:
+                script_public_key_type = tx_output_verbose_data.get("scriptPublicKeyType")
+                if script_public_key_type:
+                    tx_output_verbose_data["scriptPublicKeyType"] = script_public_key_type.lower()
+    return block

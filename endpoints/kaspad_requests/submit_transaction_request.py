@@ -1,12 +1,24 @@
 # encoding: utf-8
-
+import logging
+from asyncio import wait_for
 from typing import List
 
-from fastapi import Query
+from fastapi import Query, HTTPException
+from kaspa import (
+    Transaction,
+    TransactionInput,
+    TransactionOutpoint,
+    TransactionOutput,
+    ScriptPublicKey,
+    Hash,
+)
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
+
+_logger = logging.getLogger(__name__)
 
 
 class SubmitTxOutpoint(BaseModel):
@@ -29,7 +41,6 @@ class SubmitTxScriptPublicKey(BaseModel):
 class SubmitTxOutput(BaseModel):
     amount: int
     scriptPublicKey: SubmitTxScriptPublicKey
-    # verboseData: TxOutputVerboseData | None
 
 
 class SubmitTxModel(BaseModel):
@@ -43,10 +54,6 @@ class SubmitTxModel(BaseModel):
 class SubmitTransactionRequest(BaseModel):
     transaction: SubmitTxModel
     allowOrphan: bool = False
-
-
-class SubmitTransactionReplacementRequest(BaseModel):
-    transaction: SubmitTxModel
 
 
 class SubmitTransactionResponse(BaseModel):
@@ -64,25 +71,75 @@ async def submit_a_new_transaction(
     body: SubmitTransactionRequest,
     replaceByFee: bool = Query(description="Replace an existing transaction in the mempool", default=False),
 ):
+    rpc_client = await kaspad_rpc_client()
     if replaceByFee:
-        # Replace by fee doesn't have the allowOrphan attribute
-        body = SubmitTransactionReplacementRequest(transaction=body.transaction)
-        tx_resp = await kaspad_client.request("submitTransactionReplacementRequest", params=body.dict())
-        tx_resp = tx_resp["submitTransactionReplacementResponse"]
+        if rpc_client:
+            tx = convert_from_legacy_tx(body.transaction)
+            try:
+                tx_resp = await wait_for(rpc_client.submit_transaction_replacement({"transaction": tx}), 10)
+            except Exception as e:
+                logging.warning(f"Failed submitting transaction, error (w1r): {str(e)}")
+                return JSONResponse(status_code=400, content={"error": str(e)})
+        else:
+            resp = await kaspad_client.request(
+                "submitTransactionReplacementRequest", {"transaction": body.transaction.dict()}
+            )
+            if resp.get("error"):
+                logging.warning(f"Failed submitting transaction, error (g1r): {resp['error']}")
+                raise HTTPException(500, resp["error"])
+            tx_resp = resp["submitTransactionReplacementResponse"]
     else:
-        tx_resp = await kaspad_client.request("submitTransactionRequest", params=body.dict())
-        tx_resp = tx_resp["submitTransactionResponse"]
+        if rpc_client:
+            tx = convert_from_legacy_tx(body.transaction)
+            try:
+                tx_resp = await wait_for(
+                    rpc_client.submit_transaction({"allow_orphan": body.allowOrphan, "transaction": tx}), 10
+                )
+            except Exception as e:
+                logging.warning(f"Failed submitting transaction, error (w1): {str(e)}")
+                return JSONResponse(status_code=400, content={"error": str(e)})
+        else:
+            resp = await kaspad_client.request("submitTransactionRequest", body.dict())
+            if resp.get("error"):
+                logging.warning(f"Failed submitting transaction, error (g1): {resp['error']}")
+                raise HTTPException(500, resp["error"])
+            tx_resp = resp["submitTransactionResponse"]
 
     if "error" in tx_resp:
+        logging.warning(f"Failed submitting transaction, error (2): {tx_resp['error'].get('message', '')}")
         return JSONResponse(status_code=400, content={"error": tx_resp["error"].get("message", "")})
-
-    # if transactionId is in response
     elif "transactionId" in tx_resp:
+        logging.info(f"Successfully submitted transaction: {tx_resp['transactionId']}")
         return {"transactionId": tx_resp["transactionId"]}
-
-    # something else went wrong
     else:
-        return JSONResponse(status_code=400, content={"error": str(tx_resp)})
+        logging.warning(f"Failed submitting transaction, error (3): {str(tx_resp)}")
+        return JSONResponse(status_code=500, content={"error": str(tx_resp)})
+
+
+def convert_from_legacy_tx(transaction: SubmitTxModel) -> Transaction | None:
+    if not transaction:
+        return
+    return Transaction(
+        transaction.version,
+        [
+            TransactionInput(
+                TransactionOutpoint(Hash(i.previousOutpoint.transactionId), i.previousOutpoint.index),
+                i.signatureScript,
+                i.sequence,
+                i.sigOpCount,
+            )
+            for i in transaction.inputs
+        ],
+        [
+            TransactionOutput(o.amount, ScriptPublicKey(o.scriptPublicKey.version, o.scriptPublicKey.scriptPublicKey))
+            for o in transaction.outputs
+        ],
+        transaction.lockTime or 0,
+        transaction.subnetworkId or "0000000000000000000000000000000000000000",
+        0,
+        "",
+        0,
+    )
 
 
 """

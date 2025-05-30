@@ -32,6 +32,7 @@ from endpoints.kaspad_requests.submit_transaction_request import (
     submit_a_new_transaction,
 )
 from helper import get_kas_market_data
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 IS_SQL_DB_CONFIGURED = os.getenv("SQL_URI") is not None
@@ -61,6 +62,7 @@ async def startup():
 
     # find kaspad before staring webserver
     await kaspad_client.initialize_all()
+    await kaspad_rpc_client()
 
 
 @app.get("/", include_in_schema=False)

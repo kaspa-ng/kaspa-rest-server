@@ -24,6 +24,7 @@ waitress = "^3.0.0"
 starlette = "^0.37.2"
 fastapi-utils = "^0.2.1"
 kaspa-script-address = "^0.0.1"
+kaspa = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.9"

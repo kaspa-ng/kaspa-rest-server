@@ -3,7 +3,8 @@ from typing import List
 
 from pydantic import BaseModel
 
-from server import app, kaspad_client
+from endpoints.get_blockdag import get_blockdag
+from server import app
 
 
 class NetworkResponse(BaseModel):
@@ -29,5 +30,4 @@ async def get_network():
     """
     Get some global kaspa network information
     """
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    return resp["getBlockDagInfoResponse"]
+    return await get_blockdag()

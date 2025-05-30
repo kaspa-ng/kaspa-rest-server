@@ -1,8 +1,11 @@
 # encoding: utf-8
+from asyncio import wait_for
 from typing import List
 
+from fastapi import HTTPException
 from pydantic import BaseModel
 
+from kaspad.KaspadRpcClient import kaspad_rpc_client
 from server import app, kaspad_client
 
 
@@ -21,7 +24,13 @@ class BlockdagResponse(BaseModel):
 @app.get("/info/blockdag", response_model=BlockdagResponse, tags=["Kaspa network info"])
 async def get_blockdag():
     """
-    Get some global Kaspa BlockDAG information
+    Get Kaspa BlockDAG information
     """
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    return resp["getBlockDagInfoResponse"]
+    rpc_client = await kaspad_rpc_client()
+    if rpc_client:
+        return await wait_for(rpc_client.get_block_dag_info(), 10)
+    else:
+        resp = await kaspad_client.request("getBlockDagInfoRequest")
+        if resp.get("error"):
+            raise HTTPException(500, resp["error"])
+        return resp["getBlockDagInfoResponse"]

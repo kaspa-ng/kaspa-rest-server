@@ -9,10 +9,12 @@ from sqlalchemy import select
 from constants import BPS
 from dbsession import async_session_blocks
 from endpoints import sql_db_only
+from endpoints.get_blockdag import get_blockdag
+from endpoints.get_blocks import get_block_from_kaspad
 from helper import KeyValueStore
 from helper.difficulty_calculation import bits_to_difficulty
 from models.Block import Block
-from server import app, kaspad_client
+from server import app
 
 _logger = logging.getLogger(__name__)
 
@@ -39,9 +41,8 @@ async def get_hashrate(stringOnly: bool = False):
     """
     Returns the current hashrate for Kaspa network in TH/s.
     """
-
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    hashrate = resp["getBlockDagInfoResponse"]["difficulty"] * 2 * BPS
+    bdi = await get_blockdag()
+    hashrate = bdi["difficulty"] * 2 * BPS
     hashrate_in_th = hashrate / 1_000_000_000_000
 
     if not stringOnly:
@@ -91,10 +92,9 @@ async def get_max_hashrate():
             await KeyValueStore.set("maxhash_last_value", json.dumps(response))
             return response
     else:
-        resp = await kaspad_client.request("getBlockDagInfoRequest")
-        block_hash = resp["getBlockDagInfoResponse"]["virtualParentHashes"][0]
-        resp = await kaspad_client.request("getBlockRequest", params={"hash": block_hash, "includeTransactions": False})
-        block = resp.get("getBlockResponse", {}).get("block", {})
+        bdi = await get_blockdag()
+        block_hash = bdi["virtualParentHashes"][0]
+        block = await get_block_from_kaspad(block_hash, False, False)
         block_difficulty = int(block.get("verboseData", {}).get("difficulty", 0))
         hashrate_new = block_difficulty * 2 * BPS
         logging.debug(f"hashrate_new (kaspad): {int(hashrate_new)}")

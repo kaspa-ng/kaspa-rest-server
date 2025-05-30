@@ -1,5 +1,7 @@
 import os
 
+KASPAD_WRPC_URL = os.getenv("KASPAD_WRPC_URL")
+
 USE_SCRIPT_FOR_ADDRESS = os.getenv("USE_SCRIPT_FOR_ADDRESS", "false").lower() == "true"
 PREV_OUT_RESOLVED = os.getenv("PREV_OUT_RESOLVED", "false").lower() == "true"
 

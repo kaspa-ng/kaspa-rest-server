@@ -14,13 +14,14 @@ from starlette.responses import Response
 from constants import TX_SEARCH_ID_LIMIT, TX_SEARCH_BS_LIMIT, PREV_OUT_RESOLVED
 from dbsession import async_session, async_session_blocks
 from endpoints import filter_fields, sql_db_only
+from endpoints.get_blocks import get_block_from_kaspad
 from helper.utils import add_cache_control
 from models.Block import Block
 from models.BlockTransaction import BlockTransaction
 from models.Subnetwork import Subnetwork
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from models.TransactionAcceptance import TransactionAcceptance
-from server import app, kaspad_client
+from server import app
 
 _logger = logging.getLogger(__name__)
 
@@ -205,10 +206,11 @@ async def get_transaction(
                     transaction["accepting_block_blue_score"] = accepting_block_blue_score
                     transaction["accepting_block_time"] = accepting_block_time
                     if not accepting_block_blue_score:
-                        accepting_block = await get_block_from_kaspad(accepting_block_hash)
-                        if accepting_block and accepting_block["header"]:
-                            transaction["accepting_block_blue_score"] = accepting_block["header"]["blueScore"]
-                            transaction["accepting_block_time"] = accepting_block["header"]["timestamp"]
+                        accepting_block = await get_block_from_kaspad(accepting_block_hash, False, False)
+                        accepting_block_header = accepting_block.get("header") if accepting_block else None
+                        if accepting_block_header:
+                            transaction["accepting_block_blue_score"] = accepting_block_header.get("blueScore")
+                            transaction["accepting_block_time"] = accepting_block_header.get("timestamp")
 
     if transaction:
         add_cache_control(transaction.get("accepting_block_blue_score"), transaction.get("block_time"), response)
@@ -328,7 +330,9 @@ async def search_for_transactions(
         else:
             if tx.accepting_block_hash:
                 if tx.accepting_block_hash not in block_cache:
-                    block_cache[tx.accepting_block_hash] = await get_block_from_kaspad(tx.accepting_block_hash)
+                    block_cache[tx.accepting_block_hash] = await get_block_from_kaspad(
+                        tx.accepting_block_hash, False, False
+                    )
                 accepting_block = block_cache[tx.accepting_block_hash]
                 if accepting_block and accepting_block["header"]:
                     accepting_block_blue_score = accepting_block["header"]["blueScore"]
@@ -459,17 +463,21 @@ async def get_tx_outputs_from_db(fields, transaction_ids):
         return tx_outputs_dict
 
 
-async def get_transaction_from_kaspad(block_hashes, transactionId, includeInputs, includeOutputs):
-    resp = await kaspad_client.request("getBlockRequest", params={"hash": block_hashes[0], "includeTransactions": True})
-    if "block" in resp["getBlockResponse"] and "transactions" in resp["getBlockResponse"]["block"]:
-        for tx in resp["getBlockResponse"]["block"]["transactions"]:
-            if tx["verboseData"]["transactionId"] == transactionId:
+async def get_transaction_from_kaspad(block_hashes, transaction_id, include_inputs, include_outputs):
+    block = await get_block_from_kaspad(block_hashes[0], True, False)
+    return map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inputs, include_outputs)
+
+
+def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inputs, include_outputs):
+    if block and "transactions" in block:
+        for tx in block["transactions"]:
+            if tx["verboseData"]["transactionId"] == transaction_id:
                 return {
                     "subnetwork_id": tx["subnetworkId"],
                     "transaction_id": tx["verboseData"]["transactionId"],
                     "hash": tx["verboseData"]["hash"],
                     "mass": tx["verboseData"]["computeMass"]
-                    if tx["verboseData"].get("computeMass", "0") != "0"
+                    if tx["verboseData"].get("computeMass", "0") not in ("0", 0)
                     else None,
                     "payload": tx["payload"] if tx["payload"] else None,
                     "block_hash": block_hashes,
@@ -485,7 +493,7 @@ async def get_transaction_from_kaspad(block_hashes, transactionId, includeInputs
                         }
                         for tx_in_idx, tx_in in enumerate(tx["inputs"])
                     ]
-                    if includeInputs and tx["inputs"]
+                    if include_inputs and tx["inputs"]
                     else None,
                     "outputs": [
                         {
@@ -498,12 +506,6 @@ async def get_transaction_from_kaspad(block_hashes, transactionId, includeInputs
                         }
                         for tx_out_idx, tx_out in enumerate(tx["outputs"])
                     ]
-                    if includeOutputs and tx["outputs"]
+                    if include_outputs and tx["outputs"]
                     else None,
                 }
-
-
-async def get_block_from_kaspad(block_hash):
-    if block_hash:
-        resp = await kaspad_client.request("getBlockRequest", params={"hash": block_hash, "includeTransactions": False})
-        return resp.get("getBlockResponse", {}).get("block")
