@@ -87,6 +87,7 @@ async def get_virtual_chain_transactions(
                 Block.daa_score,
                 Block.timestamp,
             )
+            .distinct()
             .select_from(Block)
             .join(TransactionAcceptance, Block.hash == TransactionAcceptance.block_hash)
             .where(between(Block.blue_score, blue_score_gte, blue_score_lt - 1))
