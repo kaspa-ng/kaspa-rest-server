@@ -14,6 +14,7 @@ def _make_engine(uri: str):
     return create_async_engine(
         uri,
         pool_pre_ping=True,
+        isolation_level="AUTOCOMMIT",
         pool_size=int(os.getenv("SQL_POOL_SIZE", "15")),
         max_overflow=int(os.getenv("SQL_POOL_MAX_OVERFLOW", "0")),
         pool_recycle=int(os.getenv("SQL_POOL_RECYCLE_SECONDS", "1200")),
