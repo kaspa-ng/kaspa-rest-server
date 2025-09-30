@@ -530,7 +530,7 @@ async def get_transaction_from_kaspad(block_hashes: list[str], transaction_id: s
         return None
 
     # Запрашиваем блок у Kaspad
-    block = await get_block_from_kaspad(block_hashes[0], include_transactions=True, include_verbose=True)
+    block = await get_block_from_kaspad(block_hashes[0], True, True)
     if not block or "transactions" not in block:
         return None
 
