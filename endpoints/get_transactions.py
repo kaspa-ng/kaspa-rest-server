@@ -138,7 +138,7 @@ async def get_transaction(
     """
     res_outpoints = resolve_previous_outpoints
 
-    # --- Шаг 1: Получить все данные из БД и сразу закрыть сессии ---
+    # --- Step 1 - get all the data from database and close the db connection ---
     block_hashes = None
     db_transaction = None
     accepted_transaction_id = None
@@ -155,7 +155,7 @@ async def get_transaction(
             )
             block_hashes = result.scalars().all()
 
-        # Попытка найти принятие транзакции и accepting block
+        # Find transaction acceptance and accepting block
         if block_hashes:
             acceptance_result = await session_blocks.execute(
                 select(TransactionAcceptance.transaction_id, TransactionAcceptance.block_hash)
@@ -177,19 +177,19 @@ async def get_transaction(
                 if block_row:
                     accepting_block_blue_score, accepting_block_time = block_row
 
-    # --- Шаг 2: Выполняем внешние HTTP-вызовы (без открытых сессий!) ---
+    # --- Step 2 - fire up outgoing http requests without holding a db connection ---
     transaction = None
 
-    # Сначала пробуем получить транзакцию из kaspad, если есть block_hashes
+    # Get transaction from kaspad, if block_hashes are present
     if block_hashes:
         transaction = await get_transaction_from_kaspad(block_hashes, transactionId, inputs, outputs)
 
-    # Если не получили из kaspad — используем данные из БД
+    # If didn't get anything from kaspad — try the DB
     if not transaction and db_transaction:
         transaction = db_transaction
-        transaction["block_hash"] = block_hashes  # может быть None или []
+        transaction["block_hash"] = block_hashes  # Can be None or []
 
-        # Загружаем inputs/outputs из БД при необходимости
+        # Get inputs/outputs from DB if necessary
         if inputs and (res_outpoints != "light" or PREV_OUT_RESOLVED) and res_outpoints != "full":
             tx_inputs = await get_tx_inputs_from_db(None, res_outpoints, [transactionId])
             transaction["inputs"] = tx_inputs.get(transactionId)
@@ -198,7 +198,7 @@ async def get_transaction(
             tx_outputs = await get_tx_outputs_from_db(None, [transactionId])
             transaction["outputs"] = tx_outputs.get(transactionId)
 
-    # Получаем транзакцию из основной БД только если Kaspad не дал результат
+    # Get transaction from the DB if Kaspad didn't have anything
     if not transaction:
         async with async_session() as session:
             tx = await session.execute(
@@ -218,7 +218,7 @@ async def get_transaction(
                     "block_hash": block_hashes,  # важно!
                 }
 
-                # Загружаем inputs/outputs из БД при необходимости
+                # Get inputs/outputs from DB if necessary
                 if inputs and (res_outpoints != "light" or PREV_OUT_RESOLVED) and res_outpoints != "full":
                     tx_inputs = await get_tx_inputs_from_db(None, res_outpoints, [transactionId])
                     transaction["inputs"] = tx_inputs.get(transactionId)
@@ -227,13 +227,13 @@ async def get_transaction(
                     tx_outputs = await get_tx_outputs_from_db(None, [transactionId])
                     transaction["outputs"] = tx_outputs.get(transactionId)
 
-    # Дополнительная обработка inputs при light/full resolve
+    # Additional inputs processing for light/full resolve
     if transaction and inputs and (res_outpoints == "light" and not PREV_OUT_RESOLVED or res_outpoints == "full"):
         tx_inputs = await get_tx_inputs_from_db(None, res_outpoints, [transactionId])
         if transactionId in tx_inputs:
             transaction["inputs"] = tx_inputs[transactionId]
 
-    # Устанавливаем флаг принятия
+    # Set the acceptance flag
     if transaction is not None:
         transaction["is_accepted"] = accepted_transaction_id is not None
         if accepting_block_hash:
@@ -241,7 +241,7 @@ async def get_transaction(
             transaction["accepting_block_blue_score"] = accepting_block_blue_score
             transaction["accepting_block_time"] = accepting_block_time
 
-            # Если данных о блоке нет — запрашиваем из kaspad
+            # If not block data is present, call kaspad
             if accepting_block_blue_score is None:
                 accepting_block = await get_block_from_kaspad(accepting_block_hash, False, False)
                 if accepting_block and accepting_block.get("header"):
@@ -249,9 +249,9 @@ async def get_transaction(
                     transaction["accepting_block_blue_score"] = header.get("blueScore")
                     transaction["accepting_block_time"] = header.get("timestamp")
 
-    # --- Шаг 3: Финальная проверка и ответ ---
+    # --- Step 3 - final check and return results ---
     if transaction is not None:
-        # Убедимся, что block_hash установлен (может быть None из kaspad)
+        # Check if block_hash is set (can be None in kaspad)
         if "block_hash" not in transaction:
             transaction["block_hash"] = block_hashes
 
@@ -529,12 +529,12 @@ async def get_transaction_from_kaspad(block_hashes: list[str], transaction_id: s
     if not block_hashes:
         return None
 
-    # Запрашиваем блок у Kaspad
+    # Get block from Kaspad
     block = await get_block_from_kaspad(block_hashes[0], True, True)
     if not block or "transactions" not in block:
         return None
 
-    # Ищем нужную транзакцию в блоке
+    # Get transaction from block
     for tx in block["transactions"]:
         verbose_data = tx.get("verboseData", {})
         if verbose_data.get("transactionId") == transaction_id:
@@ -573,9 +573,9 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                         "previous_outpoint_index": inp["previousOutpoint"]["index"],
                         "signature_script": inp.get("signatureScript"),
                         "sig_op_count": inp.get("sigOpCount"),
-                        "previous_outpoint_resolved": None,          # будет заполнено позже, если нужно
-                        "previous_outpoint_address": None,           # будет заполнено позже
-                        "previous_outpoint_amount": None,            # будет заполнено позже
+                        "previous_outpoint_resolved": None,          # Will be set later if necessary
+                        "previous_outpoint_address": None,           # Will be set later
+                        "previous_outpoint_amount": None,            # Will be set later
                     }
                     for idx, inp in enumerate(tx.get("inputs", []))
                 ] if include_inputs and tx.get("inputs") else None,
@@ -587,7 +587,7 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                         "script_public_key": out.get("scriptPublicKey", {}).get("scriptPublicKey"),
                         "script_public_key_address": out.get("verboseData", {}).get("scriptPublicKeyAddress"),
                         "script_public_key_type": out.get("verboseData", {}).get("scriptPublicKeyType"),
-                        "accepting_block_hash": None,  # неизвестно на этом этапе
+                        "accepting_block_hash": None,  # Unkown at the moment
                     }
                     for idx, out in enumerate(tx.get("outputs", []))
                 ] if include_outputs and tx.get("outputs") else None,
