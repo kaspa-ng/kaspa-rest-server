@@ -529,8 +529,8 @@ async def get_transaction_from_kaspad(block_hashes: list[str], transaction_id: s
     if not block_hashes:
         return None
 
-    # Get block from Kaspad
-    block = await get_block_from_kaspad(block_hashes[0], True, True)
+    # Get block from Kaspad (изменен последний параметр с True на False)
+    block = await get_block_from_kaspad(block_hashes[0], True, False)
     if not block or "transactions" not in block:
         return None
 
@@ -561,8 +561,10 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                 "subnetwork_id": tx.get("subnetworkId"),
                 "transaction_id": verbose.get("transactionId"),
                 "hash": verbose.get("hash"),
-                "mass": verbose.get("computeMass") if verbose.get("computeMass") not in ("0", 0) else None,
-                "payload": tx.get("payload") or None,
+                "mass": tx["verboseData"]["computeMass"]
+                    if tx["verboseData"].get("computeMass", "0") not in ("0", 0)
+                    else None,
+                "payload": tx["payload"] if tx["payload"] else None,
                 "block_hash": block_hashes,
                 "block_time": verbose.get("blockTime"),
                 "inputs": [
@@ -573,9 +575,7 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                         "previous_outpoint_index": inp["previousOutpoint"]["index"],
                         "signature_script": inp.get("signatureScript"),
                         "sig_op_count": inp.get("sigOpCount"),
-                        "previous_outpoint_resolved": None,          # Will be set later if necessary
-                        "previous_outpoint_address": None,           # Will be set later
-                        "previous_outpoint_amount": None,            # Will be set later
+                        # Убраны поля: previous_outpoint_resolved, previous_outpoint_address, previous_outpoint_amount
                     }
                     for idx, inp in enumerate(tx.get("inputs", []))
                 ] if include_inputs and tx.get("inputs") else None,
@@ -587,7 +587,7 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                         "script_public_key": out.get("scriptPublicKey", {}).get("scriptPublicKey"),
                         "script_public_key_address": out.get("verboseData", {}).get("scriptPublicKeyAddress"),
                         "script_public_key_type": out.get("verboseData", {}).get("scriptPublicKeyType"),
-                        "accepting_block_hash": None,  # Unkown at the moment
+                        # Убрано поле: accepting_block_hash
                     }
                     for idx, out in enumerate(tx.get("outputs", []))
                 ] if include_outputs and tx.get("outputs") else None,
