@@ -14,10 +14,11 @@ def _make_engine(uri: str):
     return create_async_engine(
         uri,
         pool_pre_ping=True,
-        connect_args={"server_settings": {"enable_seqscan": "off"}},
+        isolation_level="AUTOCOMMIT",
         pool_size=int(os.getenv("SQL_POOL_SIZE", "15")),
         max_overflow=int(os.getenv("SQL_POOL_MAX_OVERFLOW", "0")),
         pool_recycle=int(os.getenv("SQL_POOL_RECYCLE_SECONDS", "1200")),
+        pool_timeout=int(os.getenv("SQL_POOL_TIMEOUT_SECONDS", "30")),
         echo=os.getenv("DEBUG") == "true",
     )
 
