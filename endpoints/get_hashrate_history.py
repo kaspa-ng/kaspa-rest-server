@@ -1,6 +1,5 @@
 # encoding: utf-8
 import logging
-from datetime import date
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -11,7 +10,8 @@ from pydantic import BaseModel
 from sqlalchemy import select, text, func
 from starlette.responses import Response
 
-from constants import HASHRATE_HISTORY
+from fastapi import Path
+from constants import HASHRATE_HISTORY, REGEX_DATE, A_DAY_MS, GENESIS_START_OF_DAY_MS, AN_HOUR_MS
 from dbsession import async_session_blocks
 from endpoints.get_virtual_chain_blue_score import get_virtual_selected_parent_blue_score
 from helper.difficulty_calculation import bits_to_difficulty
@@ -37,22 +37,27 @@ _crescendo_blue_score = 108554145
 
 
 @app.get("/info/hashrate/history/{day}", response_model=list[HashrateHistoryResponse], tags=["Kaspa network info"])
-async def get_hashrate_history_for_day(day: date, response: Response):
+async def get_hashrate_history_for_day(response: Response, day: str = Path(pattern=REGEX_DATE)):
     """
     Get hashrate history for a specific UTC day (YYYY-MM-DD)
     """
     if not HASHRATE_HISTORY:
         raise HTTPException(status_code=503, detail="Hashrate history is disabled")
-    response.headers["Cache-Control"] = "public, max-age=600"
 
-    today_utc = datetime.now(timezone.utc).date()
-    if day > today_utc:
-        raise HTTPException(status_code=400, detail="Day cannot be in the future")
-    if day < date(2021, 11, 7):
-        raise HTTPException(status_code=400, detail="Day cannot be before genesis")
+    dt = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    start_ms = int(dt.timestamp() * 1000)
+    end_ms = start_ms + A_DAY_MS
+    now_ms = datetime.now(tz=timezone.utc).timestamp() * 1000
 
-    start_ms = int(datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc).timestamp() * 1000)
-    end_ms = start_ms + 86_400_000
+    if end_ms < now_ms - A_DAY_MS:
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    elif end_ms < now_ms - AN_HOUR_MS:
+        response.headers["Cache-Control"] = "public, max-age=3600"
+    else:
+        response.headers["Cache-Control"] = "public, max-age=600"
+
+    if start_ms < GENESIS_START_OF_DAY_MS or start_ms > now_ms:
+        return []
 
     sample_interval = int(15 / _sample_interval_minutes)
 
