@@ -19,7 +19,6 @@ from kaspad.KaspadRpcClient import kaspad_rpc_client
 from models.Block import Block
 from models.BlockParent import BlockParent
 from models.BlockTransaction import BlockTransaction
-from models.Subnetwork import Subnetwork
 from models.Transaction import Transaction
 
 from models.TransactionAcceptance import TransactionAcceptance
@@ -423,16 +422,19 @@ async def get_transactions(blockId, transactionIds):
     """
     async with async_session() as s:
         transactions = (
-            await s.execute(
-                select(Transaction, Subnetwork)
-                .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
-                .filter(Transaction.transaction_id.in_(transactionIds))
-                .order_by(Subnetwork.id)
+            (
+                await s.execute(
+                    select(Transaction)
+                    .filter(Transaction.transaction_id.in_(transactionIds))
+                    .order_by(Transaction.block_time)
+                )
             )
-        ).all()
+            .scalars()
+            .all()
+        )
 
     tx_list = []
-    for tx, sub in transactions:
+    for tx in transactions:
         tx_list.append(
             {
                 "inputs": [
@@ -457,7 +459,7 @@ async def get_transactions(blockId, transactionIds):
                     }
                     for tx_out in (tx.outputs or [])
                 ],
-                "subnetworkId": sub.subnetwork_id,
+                "subnetworkId": tx.subnetwork_id,
                 "payload": tx.payload,
                 "verboseData": {
                     "transactionId": tx.transaction_id,

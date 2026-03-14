@@ -19,7 +19,6 @@ from helper.PublicKeyType import get_public_key_type
 from helper.utils import add_cache_control
 from models.Block import Block
 from models.BlockTransaction import BlockTransaction
-from models.Subnetwork import Subnetwork
 from models.Transaction import Transaction
 from models.TransactionAcceptance import TransactionAcceptance
 from models.TransactionTypes import bytea_to_hex
@@ -159,17 +158,13 @@ async def get_transaction(
                     ).get(transaction_id)
 
             if not transaction:
-                tx = await session.execute(
-                    select(Transaction, Subnetwork)
-                    .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
-                    .filter(Transaction.transaction_id == transaction_id)
-                )
+                tx = await session.execute(select(Transaction).filter(Transaction.transaction_id == transaction_id))
                 tx = tx.first()
 
                 if tx:
                     logging.debug(f"Found transaction {transaction_id} in database")
                     transaction = {
-                        "subnetwork_id": tx.Subnetwork.subnetwork_id,
+                        "subnetwork_id": tx.Transaction.subnetwork_id,
                         "transaction_id": tx.Transaction.transaction_id,
                         "hash": tx.Transaction.hash,
                         "mass": tx.Transaction.mass,
@@ -270,11 +265,9 @@ async def search_for_transactions(
             tx_query = (
                 select(
                     Transaction,
-                    Subnetwork,
                     TransactionAcceptance.transaction_id.label("accepted_transaction_id"),
                     TransactionAcceptance.block_hash.label("accepting_block_hash"),
                 )
-                .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
                 .outerjoin(TransactionAcceptance, Transaction.transaction_id == TransactionAcceptance.transaction_id)
                 .order_by(Transaction.block_time.desc())
             )
@@ -347,7 +340,7 @@ async def search_for_transactions(
 
         result = filter_fields(
             {
-                "subnetwork_id": tx.Subnetwork.subnetwork_id,
+                "subnetwork_id": tx.Transaction.subnetwork_id,
                 "transaction_id": tx.Transaction.transaction_id,
                 "hash": tx.Transaction.hash,
                 "mass": tx.Transaction.mass,

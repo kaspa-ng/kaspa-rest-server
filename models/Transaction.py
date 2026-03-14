@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, BigInteger, ARRAY
-from sqlalchemy import SmallInteger
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql.type_api import UserDefinedType
 
 from dbsession import Base
 from models.type_decorators.HexColumn import HexColumn
+from models.type_decorators.SubnetworkColumn import SubnetworkColumn
 
 
 class TransactionInputType(UserDefinedType):
@@ -20,7 +20,7 @@ class TransactionOutputType(UserDefinedType):
 class Transaction(Base):
     __tablename__ = "transactions"
     transaction_id = Column(HexColumn, primary_key=True)
-    subnetwork_id = Column(SmallInteger)
+    subnetwork_id = Column(SubnetworkColumn)
     hash = Column(HexColumn)
     mass = Column(Integer)
     payload = Column(HexColumn)
