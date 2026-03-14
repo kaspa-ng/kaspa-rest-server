@@ -7,6 +7,18 @@ MASS_PER_SIG_OP = 1000
 MAXIMUM_STANDARD_TRANSACTION_MASS = 100_000
 
 
+def decode_sig_op_count(tx_version: int, encoded: int) -> int:
+    """
+    Decodes a compressed signature operation count.
+    For tx version 0 (mainnet), the value is used directly.
+    For tx version > 0: values 0-100 are direct; 101-255 expand via
+    actual = 100 + (encoded - 100) * 10  (max decoded value: 1650).
+    """
+    if tx_version == 0 or encoded <= 100:
+        return encoded
+    return 100 + (encoded - 100) * 10
+
+
 def outpoint_size(tx_input_outpoint):
     """
     size for outpoint
@@ -80,5 +92,7 @@ def calc_compute_mass(tx):
     total_script_public_key_mass = MASS_PER_SCRIPT_PUB_KEY_BYTE * total_script_public_key_sum
 
     # calc mass for all inputs with sigOpCount
-    total_sigops_mass = MASS_PER_SIG_OP * sum([x["sigOpCount"] for x in tx["inputs"]])
+    total_sigops_mass = MASS_PER_SIG_OP * sum(
+        [decode_sig_op_count(tx.get("version", 0), x["sigOpCount"]) for x in tx["inputs"]]
+    )
     return int(mass + total_script_public_key_mass + total_sigops_mass)

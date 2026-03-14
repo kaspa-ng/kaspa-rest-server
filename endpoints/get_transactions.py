@@ -19,7 +19,6 @@ from helper.PublicKeyType import get_public_key_type
 from helper.utils import add_cache_control
 from models.Block import Block
 from models.BlockTransaction import BlockTransaction
-from models.Subnetwork import Subnetwork
 from models.Transaction import Transaction
 from models.TransactionAcceptance import TransactionAcceptance
 from models.TransactionTypes import bytea_to_hex
@@ -70,6 +69,7 @@ class TxModel(BaseModel):
     payload: str | None
     block_hash: List[str] | None
     block_time: int | None
+    version: int | None
     is_accepted: bool | None
     accepting_block_hash: str | None
     accepting_block_blue_score: int | None
@@ -159,23 +159,20 @@ async def get_transaction(
                     ).get(transaction_id)
 
             if not transaction:
-                tx = await session.execute(
-                    select(Transaction, Subnetwork)
-                    .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
-                    .filter(Transaction.transaction_id == transaction_id)
-                )
+                tx = await session.execute(select(Transaction).filter(Transaction.transaction_id == transaction_id))
                 tx = tx.first()
 
                 if tx:
                     logging.debug(f"Found transaction {transaction_id} in database")
                     transaction = {
-                        "subnetwork_id": tx.Subnetwork.subnetwork_id,
+                        "subnetwork_id": tx.Transaction.subnetwork_id,
                         "transaction_id": tx.Transaction.transaction_id,
                         "hash": tx.Transaction.hash,
                         "mass": tx.Transaction.mass,
                         "payload": tx.Transaction.payload,
                         "block_hash": block_hashes,
                         "block_time": tx.Transaction.block_time,
+                        "version": tx.Transaction.version or 0,
                         "inputs": [vars(i) for i in tx.Transaction.inputs]
                         if tx.Transaction.inputs and inputs
                         else None,
@@ -270,11 +267,9 @@ async def search_for_transactions(
             tx_query = (
                 select(
                     Transaction,
-                    Subnetwork,
                     TransactionAcceptance.transaction_id.label("accepted_transaction_id"),
                     TransactionAcceptance.block_hash.label("accepting_block_hash"),
                 )
-                .join(Subnetwork, Transaction.subnetwork_id == Subnetwork.id)
                 .outerjoin(TransactionAcceptance, Transaction.transaction_id == TransactionAcceptance.transaction_id)
                 .order_by(Transaction.block_time.desc())
             )
@@ -347,13 +342,14 @@ async def search_for_transactions(
 
         result = filter_fields(
             {
-                "subnetwork_id": tx.Subnetwork.subnetwork_id,
+                "subnetwork_id": tx.Transaction.subnetwork_id,
                 "transaction_id": tx.Transaction.transaction_id,
                 "hash": tx.Transaction.hash,
                 "mass": tx.Transaction.mass,
                 "payload": tx.Transaction.payload,
                 "block_hash": tx_blocks.get(tx.Transaction.transaction_id),
                 "block_time": tx.Transaction.block_time,
+                "version": tx.Transaction.version or 0,
                 "is_accepted": True if tx.accepted_transaction_id else False,
                 "accepting_block_hash": tx.accepting_block_hash,
                 "accepting_block_blue_score": accepting_block_blue_score,
@@ -531,6 +527,7 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                     "payload": tx["payload"] if tx["payload"] else None,
                     "block_hash": block_hashes,
                     "block_time": tx["verboseData"]["blockTime"],
+                    "version": tx["version"],
                     "inputs": [
                         {
                             "transaction_id": tx["verboseData"]["transactionId"],
