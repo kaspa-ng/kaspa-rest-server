@@ -38,6 +38,7 @@ poetry run gunicorn -b 0.0.0.0:8000 -w 4 -k uvicorn.workers.UvicornWorker main:a
 * PREV_OUT_RESOLVED - If true tx inputs are assumed populated with sender address, see indexer doc (default: false)
 * TX_SEARCH_ID_LIMIT - adjust the maximum number of transactionIds for transactions/search (default: 1000)
 * TX_SEARCH_BS_LIMIT - adjust the maximum blue score range for transactions/search (default: 100)
+* MAX_UPLOAD_BYTES - adjust the maximum allowed upload size in bytes (default: 200_000)
 * VSPC_REQUEST - If true enables /info/get-vscp-from-block (default: false)
 * TRANSACTION_COUNT - If true (a prepopulated) transactions_counts table will be used to provide /transactions/count/{day_or_month} (default: false)
 * ADDRESSES_ACTIVE_COUNT - If true (a prepopulated) scripts_active_counts table will be used to provide /addresses/active/count/{day_or_month} (default: false)

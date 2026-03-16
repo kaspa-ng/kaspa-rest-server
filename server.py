@@ -46,7 +46,7 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
-app.add_middleware(LimitUploadSize, max_upload_size=200_000)  # ~1MB
+app.add_middleware(LimitUploadSize, max_upload_size=int(os.getenv("MAX_UPLOAD_BYTES", 200_000)))
 
 app.add_middleware(
     CORSMiddleware,
