@@ -13,6 +13,7 @@ TRANSACTION_COUNT = os.getenv("TRANSACTION_COUNT", "false").lower() == "true"
 ADDRESSES_ACTIVE_COUNT = os.getenv("ADDRESSES_ACTIVE_COUNT", "false").lower() == "true"
 HASHRATE_HISTORY = os.getenv("HASHRATE_HISTORY", "false").lower() == "true"
 ADDRESS_RANKINGS = os.getenv("ADDRESS_RANKINGS", "false").lower() == "true"
+SCRIPTS_UTXOS_LIMIT = int(os.getenv("SCRIPTS_UTXOS_LIMIT", "10000"))
 
 NETWORK_TYPE = os.getenv("NETWORK_TYPE", "mainnet").lower()
 BPS = int(os.getenv("BPS", "10"))
