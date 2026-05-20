@@ -5,11 +5,11 @@ from typing import List
 
 from fastapi import Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import between, bindparam, exists
+from sqlalchemy import between, bindparam
 from sqlalchemy.future import select
 from starlette.responses import Response
 
-from dbsession import async_session, async_session_blocks
+from dbsession import async_session
 from endpoints import sql_db_only
 from endpoints.get_transactions import resolve_inputs_from_db, PreviousOutpointLookupMode
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
@@ -78,41 +78,43 @@ async def get_virtual_chain_transactions(
     if 0 < current_blue_score_data["blue_score"] < blue_score_gte:
         return []
 
-    async with async_session_blocks() as session_blocks:
-        chain_blocks = await session_blocks.execute(
-            select(
-                Block.hash,
-                Block.blue_score,
-                Block.daa_score,
-                Block.timestamp,
-            )
-            .where(between(Block.blue_score, blue_score_gte, blue_score_lt - 1))
-            .where(exists(select(1).where(TransactionAcceptance.block_hash == Block.hash)))
-            .order_by(Block.blue_score)
-        )
-        chain_blocks = chain_blocks.mappings().all()
-
-    if not chain_blocks:
-        return []
-
     async with async_session() as session:
-        accepted_txs = await session.execute(
-            select(TransactionAcceptance.block_hash, TransactionAcceptance.transaction_id).where(
-                TransactionAcceptance.block_hash.in_(bindparam("block_hashes", expanding=True))
-            ),
-            {"block_hashes": [x["hash"] for x in chain_blocks]},
+        rows = (
+            (
+                await session.execute(
+                    select(
+                        Block.hash,
+                        Block.blue_score,
+                        Block.daa_score,
+                        Block.timestamp,
+                        TransactionAcceptance.transaction_id,
+                    )
+                    .join(TransactionAcceptance, TransactionAcceptance.block_hash == Block.hash)
+                    .where(between(Block.blue_score, blue_score_gte, blue_score_lt - 1))
+                    .order_by(Block.blue_score)
+                )
+            )
+            .mappings()
+            .all()
         )
-        accepted_txs = accepted_txs.mappings().all()
 
-    if not accepted_txs:
+    if not rows:
         return []
 
-    transaction_ids = []
+    chain_blocks = {}
     accepted_txs_dict = defaultdict(list)
-    for accepted_tx in accepted_txs:
-        transaction_ids.append(accepted_tx["transaction_id"])
-        accepted_txs_dict[accepted_tx["block_hash"]].append(accepted_tx["transaction_id"])
-    del accepted_txs
+    transaction_ids = []
+    for r in rows:
+        if r["hash"] not in chain_blocks:
+            chain_blocks[r["hash"]] = {
+                "hash": r["hash"],
+                "blue_score": r["blue_score"],
+                "daa_score": r["daa_score"],
+                "timestamp": r["timestamp"],
+            }
+        accepted_txs_dict[r["hash"]].append(r["transaction_id"])
+        transaction_ids.append(r["transaction_id"])
+    del rows
 
     async with async_session() as session:
         tx_list = (
@@ -137,7 +139,7 @@ async def get_virtual_chain_transactions(
         tx_outputs.setdefault(o["transaction_id"], []).append(o)
 
     results = []
-    for chain_block in chain_blocks:
+    for chain_block in chain_blocks.values():
         transactions = []
         for tx_id in accepted_txs_dict[chain_block["hash"]]:
             inputs = tx_inputs.get(tx_id)

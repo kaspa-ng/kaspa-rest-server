@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from starlette.responses import Response
 
 from constants import ADDRESS_RANKINGS
-from dbsession import async_session_blocks
+from dbsession import async_session
 from endpoints import sql_db_only
 from models.DistributionTier import DistributionTier as DbDistributionTier
 from server import app
@@ -55,7 +55,7 @@ async def get_distribution_tiers(
         elif before > now_ms + 600_000:
             return []
 
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         ts_subquery = (
             select(DbDistributionTier.timestamp).distinct().order_by(DbDistributionTier.timestamp.desc()).limit(limit)
         )

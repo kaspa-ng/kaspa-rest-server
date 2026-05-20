@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, exists, func
 
 from constants import BPS
-from dbsession import async_session, async_session_blocks
+from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from helper.difficulty_calculation import bits_to_difficulty
 from helper.mining_address import get_miner_payload_from_block, retrieve_miner_info_from_payload
@@ -221,7 +221,7 @@ async def get_blocks_from_bluescore(
         return []
 
     if blue_score_gte is not None:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             blueScore = (
                 await s.execute(
                     select(Block.blue_score)
@@ -232,7 +232,7 @@ async def get_blocks_from_bluescore(
             ).scalar_one_or_none()
 
     if blue_score_lt is not None:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             blueScore = (
                 await s.execute(
                     select(Block.blue_score)
@@ -249,7 +249,7 @@ async def get_blocks_from_bluescore(
 
     # If the blue score is not older than 1 day, try looking up hashes and finding the blocks in kaspad first
     if current_blue_score_data["blue_score"] and (current_blue_score_data["blue_score"] - blueScore) / BPS < 86400:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             block_hashes = (await s.execute(select(Block.hash).where(Block.blue_score == blueScore))).scalars().all()
 
         if not block_hashes:
@@ -264,7 +264,7 @@ async def get_blocks_from_bluescore(
             return result
 
     # Block hashes not found in kaspad, look up blocks in the db instead
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         blocks = (await s.execute(block_join_query().where(Block.blue_score == blueScore))).all()
 
     result = []
@@ -302,7 +302,7 @@ async def get_block_from_kaspad(block_hash, include_transactions, include_color)
 
 
 async def get_block_from_db(block_hash, include_transactions):
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         result = (await s.execute(block_join_query().where(Block.hash == block_hash).limit(1))).first()
 
     if not result:
@@ -332,7 +332,7 @@ async def get_block_color_from_kaspad(block_hash):
 
 async def get_block_color_from_db(block):
     blockId = block["verboseData"]["hash"]
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         blocks = (
             (
                 await s.execute(

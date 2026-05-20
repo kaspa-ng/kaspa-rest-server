@@ -49,15 +49,3 @@ async_session_factory = sessionmaker(primary_engine, expire_on_commit=False, cla
 
 def async_session():
     return async_session_factory()
-
-
-if os.getenv("SQL_URI_BLOCKS"):
-    blocks_engine = _make_engine(os.getenv("SQL_URI_BLOCKS"))
-    async_session_blocks_factory = sessionmaker(blocks_engine, expire_on_commit=False, class_=AsyncSession)
-
-    def async_session_blocks():
-        return async_session_blocks_factory()
-else:
-
-    def async_session_blocks():
-        return async_session_factory()

@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from kaspad.KaspadRpcClient import kaspad_rpc_client
 
 from constants import BPS, HEALTH_TOLERANCE_DOWN
-from dbsession import async_session_blocks, async_session
+from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from models.Block import Block
 from models.Transaction import Transaction
@@ -53,19 +53,18 @@ async def health_state():
     current_blue_score_node = current_blue_score_data.get("blue_score")
 
     try:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             last_blue_score_db = (
                 await s.execute(select(Block.blue_score).order_by(Block.blue_score.desc()).limit(1))
             ).scalar()
-        if last_blue_score_db is None or current_blue_score_node is None:
-            db_check_status = DBCheckStatus(isSynced=False, blueScore=last_blue_score_db)
-        else:
-            blue_score_diff = abs(current_blue_score_node - last_blue_score_db)
-            is_synced = blue_score_diff < HEALTH_TOLERANCE_DOWN * BPS
-            db_check_status = DBCheckStatus(
-                isSynced=is_synced, blueScore=last_blue_score_db, blueScoreDiff=blue_score_diff
-            )
-        async with async_session() as s:
+            if last_blue_score_db is None or current_blue_score_node is None:
+                db_check_status = DBCheckStatus(isSynced=False, blueScore=last_blue_score_db)
+            else:
+                blue_score_diff = abs(current_blue_score_node - last_blue_score_db)
+                is_synced = blue_score_diff < HEALTH_TOLERANCE_DOWN * BPS
+                db_check_status = DBCheckStatus(
+                    isSynced=is_synced, blueScore=last_blue_score_db, blueScoreDiff=blue_score_diff
+                )
             last_accepted_tx_block_time_db = (
                 await s.execute(
                     select(Transaction.block_time)

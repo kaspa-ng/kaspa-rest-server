@@ -22,7 +22,7 @@ from constants import (
     GENESIS_START_OF_MONTH_MS,
     AN_HOUR_MS,
 )
-from dbsession import async_session_blocks
+from dbsession import async_session
 from endpoints import sql_db_only
 from kaspad.KaspadRpcClient import kaspad_rpc_client
 from models.TopScript import TopScript
@@ -114,7 +114,7 @@ async def get_balance_history_for_kaspa_address(
     elif end_ms < now_ms - 2 * AN_HOUR_MS:
         response.headers["Cache-Control"] = "public, max-age=600"
 
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         final_query = (
             select(TopScript.timestamp, TopScript.amount)
             .where(TopScript.script_public_key == script)

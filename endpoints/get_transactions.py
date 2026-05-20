@@ -7,12 +7,12 @@ from typing import List, Optional
 from fastapi import Path, HTTPException, Query
 from kaspa_script_address import to_address
 from pydantic import BaseModel, Field
-from sqlalchemy import exists, text
+from sqlalchemy import text
 from sqlalchemy.future import select
 from starlette.responses import Response
 
 from constants import TX_SEARCH_ID_LIMIT, TX_SEARCH_BS_LIMIT, PREV_OUT_RESOLVED, ADDRESS_PREFIX
-from dbsession import async_session, async_session_blocks
+from dbsession import async_session
 from endpoints import filter_fields, sql_db_only
 from endpoints.get_blocks import get_block_from_kaspad
 from helper.PublicKeyType import get_public_key_type
@@ -139,82 +139,80 @@ async def get_transaction(
     """
     Get details for a given transaction id
     """
-    async with async_session_blocks() as session_blocks:
-        async with async_session() as session:
-            transaction = None
-            if blockHash:
-                block_hashes = [blockHash]
-            else:
-                block_hash = (
-                    await session.execute(
-                        select(Transaction.block_hash).filter(Transaction.transaction_id == transaction_id)
-                    )
-                ).scalar_one_or_none()
-                block_hashes = [block_hash] if block_hash else []
+    async with async_session() as session:
+        transaction = None
+        if blockHash:
+            block_hashes = [blockHash]
+        else:
+            block_hash = (
+                await session.execute(
+                    select(Transaction.block_hash).filter(Transaction.transaction_id == transaction_id)
+                )
+            ).scalar_one_or_none()
+            block_hashes = [block_hash] if block_hash else []
 
-            if block_hashes:
-                transaction = await get_transaction_from_kaspad(block_hashes, transaction_id, inputs, outputs)
-                if transaction and transaction["inputs"] and inputs:
+        if block_hashes:
+            transaction = await get_transaction_from_kaspad(block_hashes, transaction_id, inputs, outputs)
+            if transaction and transaction["inputs"] and inputs:
+                transaction["inputs"] = (
+                    await resolve_inputs_from_db(transaction["inputs"], resolve_previous_outpoints, False)
+                ).get(transaction_id)
+
+        if not transaction:
+            tx = await session.execute(select(Transaction).filter(Transaction.transaction_id == transaction_id))
+            tx = tx.first()
+
+            if tx:
+                logging.debug(f"Found transaction {transaction_id} in database")
+                transaction = {
+                    "subnetwork_id": tx.Transaction.subnetwork_id,
+                    "transaction_id": tx.Transaction.transaction_id,
+                    "hash": tx.Transaction.hash,
+                    "mass": tx.Transaction.mass,
+                    "payload": tx.Transaction.payload,
+                    "block_hash": block_hashes,
+                    "block_time": tx.Transaction.block_time,
+                    "version": tx.Transaction.version or 0,
+                    "inputs": [vars(i) for i in tx.Transaction.inputs] if tx.Transaction.inputs and inputs else None,
+                    "outputs": [vars(o) for o in tx.Transaction.outputs]
+                    if tx.Transaction.outputs and outputs
+                    else None,
+                }
+                if transaction["inputs"]:
                     transaction["inputs"] = (
-                        await resolve_inputs_from_db(transaction["inputs"], resolve_previous_outpoints, False)
+                        await resolve_inputs_from_db(transaction["inputs"], resolve_previous_outpoints)
                     ).get(transaction_id)
 
-            if not transaction:
-                tx = await session.execute(select(Transaction).filter(Transaction.transaction_id == transaction_id))
-                tx = tx.first()
-
-                if tx:
-                    logging.debug(f"Found transaction {transaction_id} in database")
-                    transaction = {
-                        "subnetwork_id": tx.Transaction.subnetwork_id,
-                        "transaction_id": tx.Transaction.transaction_id,
-                        "hash": tx.Transaction.hash,
-                        "mass": tx.Transaction.mass,
-                        "payload": tx.Transaction.payload,
-                        "block_hash": block_hashes,
-                        "block_time": tx.Transaction.block_time,
-                        "version": tx.Transaction.version or 0,
-                        "inputs": [vars(i) for i in tx.Transaction.inputs]
-                        if tx.Transaction.inputs and inputs
-                        else None,
-                        "outputs": [vars(o) for o in tx.Transaction.outputs]
-                        if tx.Transaction.outputs and outputs
-                        else None,
-                    }
-                    if transaction["inputs"]:
-                        transaction["inputs"] = (
-                            await resolve_inputs_from_db(transaction["inputs"], resolve_previous_outpoints)
-                        ).get(transaction_id)
-
-            if transaction:
-                accepted_transaction_id, accepting_block_hash = (
-                    await session.execute(
-                        select(
-                            TransactionAcceptance.transaction_id,
-                            TransactionAcceptance.block_hash,
-                        ).filter(TransactionAcceptance.transaction_id == transaction_id)
+        if transaction:
+            # transactions_acceptances and blocks are ingested by independent threads, so the Block
+            # row may not be present yet for an accepting_block_hash; fall back to kaspad in that case.
+            row = (
+                await session.execute(
+                    select(
+                        TransactionAcceptance.transaction_id,
+                        TransactionAcceptance.block_hash,
+                        Block.blue_score,
+                        Block.timestamp,
                     )
-                ).one_or_none() or (None, None)
-                transaction["is_accepted"] = accepted_transaction_id is not None
+                    .outerjoin(Block, Block.hash == TransactionAcceptance.block_hash)
+                    .filter(TransactionAcceptance.transaction_id == transaction_id)
+                )
+            ).one_or_none()
+            accepted_transaction_id, accepting_block_hash, accepting_block_blue_score, accepting_block_time = (
+                row if row else (None, None, None, None)
+            )
+            transaction["is_accepted"] = accepted_transaction_id is not None
 
-                if accepting_block_hash:
-                    accepting_block_blue_score, accepting_block_time = (
-                        await session_blocks.execute(
-                            select(
-                                Block.blue_score,
-                                Block.timestamp,
-                            ).filter(Block.hash == accepting_block_hash)
-                        )
-                    ).one_or_none() or (None, None)
-                    transaction["accepting_block_hash"] = accepting_block_hash
-                    transaction["accepting_block_blue_score"] = accepting_block_blue_score
-                    transaction["accepting_block_time"] = accepting_block_time
-                    if not accepting_block_blue_score:
-                        accepting_block = await get_block_from_kaspad(accepting_block_hash, False, False)
-                        accepting_block_header = accepting_block.get("header") if accepting_block else None
-                        if accepting_block_header:
-                            transaction["accepting_block_blue_score"] = accepting_block_header.get("blueScore")
-                            transaction["accepting_block_time"] = accepting_block_header.get("timestamp")
+            if accepting_block_hash:
+                transaction["accepting_block_hash"] = accepting_block_hash
+                transaction["accepting_block_blue_score"] = accepting_block_blue_score
+                transaction["accepting_block_time"] = accepting_block_time
+                if not accepting_block_blue_score:
+                    accepting_block = await get_block_from_kaspad(accepting_block_hash, False, False)
+                    accepting_block_header = accepting_block.get("header") if accepting_block else None
+                    if accepting_block_header:
+                        transaction["accepting_block_blue_score"] = accepting_block_header.get("blueScore")
+                        transaction["accepting_block_time"] = accepting_block_header.get("timestamp")
 
     if transaction:
         add_cache_control(transaction.get("accepting_block_blue_score"), transaction.get("block_time"), response)
@@ -264,54 +262,36 @@ async def search_for_transactions(
     fields = fields.split(",") if fields else []
 
     async with async_session() as session:
-        async with async_session_blocks() as session_blocks:
-            tx_query = (
-                select(
-                    Transaction,
-                    TransactionAcceptance.transaction_id.label("accepted_transaction_id"),
-                    TransactionAcceptance.block_hash.label("accepting_block_hash"),
-                )
-                .outerjoin(TransactionAcceptance, Transaction.transaction_id == TransactionAcceptance.transaction_id)
-                .order_by(Transaction.block_time.desc())
+        tx_query = (
+            select(
+                Transaction,
+                TransactionAcceptance.transaction_id.label("accepted_transaction_id"),
+                TransactionAcceptance.block_hash.label("accepting_block_hash"),
+                Block.blue_score.label("accepting_block_blue_score"),
+                Block.timestamp.label("accepting_block_time"),
             )
+            .outerjoin(TransactionAcceptance, Transaction.transaction_id == TransactionAcceptance.transaction_id)
+            .outerjoin(Block, Block.hash == TransactionAcceptance.block_hash)
+            .order_by(Transaction.block_time.desc())
+        )
 
-            if accepting_blue_score_gte:
-                tx_acceptances = await session_blocks.execute(
-                    select(
-                        Block.hash.label("accepting_block_hash"),
-                        Block.blue_score.label("accepting_block_blue_score"),
-                        Block.timestamp.label("accepting_block_time"),
-                    )
-                    .filter(exists().where(TransactionAcceptance.block_hash == Block.hash))  # Only chain blocks
-                    .filter(Block.blue_score >= accepting_blue_score_gte)
-                    .filter(Block.blue_score < accepting_blue_score_lt)
-                )
-                tx_acceptances = {row.accepting_block_hash: row for row in tx_acceptances.all()}
-                if not tx_acceptances:
-                    return []
-                tx_query = tx_query.filter(TransactionAcceptance.block_hash.in_(tx_acceptances.keys()))
-                tx_list = (await session.execute(tx_query)).all()
-                transaction_ids = [row.Transaction.transaction_id for row in tx_list]
-            else:
-                tx_query = tx_query.filter(Transaction.transaction_id.in_(transaction_ids))
-                if acceptance == AcceptanceMode.accepted:
-                    tx_query = tx_query.filter(TransactionAcceptance.transaction_id.is_not(None))
-                elif acceptance == AcceptanceMode.rejected:
-                    tx_query = tx_query.filter(TransactionAcceptance.transaction_id.is_(None))
-                tx_list = (await session.execute(tx_query)).all()
-                if not tx_list:
-                    return []
-                accepting_block_hashes = [
-                    row.accepting_block_hash for row in tx_list if row.accepting_block_hash is not None
-                ]
-                tx_acceptances = await session_blocks.execute(
-                    select(
-                        Block.hash.label("accepting_block_hash"),
-                        Block.blue_score.label("accepting_block_blue_score"),
-                        Block.timestamp.label("accepting_block_time"),
-                    ).filter(Block.hash.in_(accepting_block_hashes))
-                )
-                tx_acceptances = {row.accepting_block_hash: row for row in tx_acceptances.all()}
+        if accepting_blue_score_gte:
+            tx_query = tx_query.filter(Block.blue_score >= accepting_blue_score_gte).filter(
+                Block.blue_score < accepting_blue_score_lt
+            )
+            tx_list = (await session.execute(tx_query)).all()
+            if not tx_list:
+                return []
+            transaction_ids = [row.Transaction.transaction_id for row in tx_list]
+        else:
+            tx_query = tx_query.filter(Transaction.transaction_id.in_(transaction_ids))
+            if acceptance == AcceptanceMode.accepted:
+                tx_query = tx_query.filter(TransactionAcceptance.transaction_id.is_not(None))
+            elif acceptance == AcceptanceMode.rejected:
+                tx_query = tx_query.filter(TransactionAcceptance.transaction_id.is_(None))
+            tx_list = (await session.execute(tx_query)).all()
+            if not tx_list:
+                return []
 
     if not fields or "inputs" in fields:
         tx_inputs = await resolve_inputs_from_db(
@@ -321,25 +301,22 @@ async def search_for_transactions(
         tx_inputs = {}
     tx_blocks = await get_tx_blocks_from_db(fields, transaction_ids)
 
+    # The Block row for an accepting_block_hash may not be ingested yet (independent threads),
+    # so fall back to kaspad when blue_score/time is missing from the join.
     block_cache = {}
     results = []
     for tx in tx_list:
-        accepting_block_blue_score = None
-        accepting_block_time = None
-        accepting_block = tx_acceptances.get(tx.accepting_block_hash)
-        if accepting_block:
-            accepting_block_blue_score = accepting_block.accepting_block_blue_score
-            accepting_block_time = accepting_block.accepting_block_time
-        else:
-            if tx.accepting_block_hash:
-                if tx.accepting_block_hash not in block_cache:
-                    block_cache[tx.accepting_block_hash] = await get_block_from_kaspad(
-                        tx.accepting_block_hash, False, False
-                    )
-                accepting_block = block_cache[tx.accepting_block_hash]
-                if accepting_block and accepting_block["header"]:
-                    accepting_block_blue_score = accepting_block["header"]["blueScore"]
-                    accepting_block_time = accepting_block["header"]["timestamp"]
+        accepting_block_blue_score = tx.accepting_block_blue_score
+        accepting_block_time = tx.accepting_block_time
+        if tx.accepting_block_hash and accepting_block_blue_score is None:
+            if tx.accepting_block_hash not in block_cache:
+                block_cache[tx.accepting_block_hash] = await get_block_from_kaspad(
+                    tx.accepting_block_hash, False, False
+                )
+            accepting_block = block_cache[tx.accepting_block_hash]
+            if accepting_block and accepting_block["header"]:
+                accepting_block_blue_score = accepting_block["header"]["blueScore"]
+                accepting_block_time = accepting_block["header"]["timestamp"]
 
         result = filter_fields(
             {
@@ -384,19 +361,21 @@ async def get_transaction_acceptance(tx_acceptance_request: TxAcceptanceRequest)
 
     async with async_session() as s:
         result = await s.execute(
-            select(TransactionAcceptance.transaction_id, TransactionAcceptance.block_hash).where(
-                TransactionAcceptance.transaction_id.in_(set(transaction_ids))
+            select(
+                TransactionAcceptance.transaction_id,
+                TransactionAcceptance.block_hash,
+                Block.blue_score,
+                Block.timestamp,
             )
+            .outerjoin(Block, Block.hash == TransactionAcceptance.block_hash)
+            .where(TransactionAcceptance.transaction_id.in_(set(transaction_ids)))
         )
-        transaction_id_to_block_hash = {tx_id: block_hash for tx_id, block_hash in result}
-
-    async with async_session_blocks() as s:
-        result = await s.execute(
-            select(Block.hash, Block.blue_score, Block.timestamp).where(
-                Block.hash.in_(set(transaction_id_to_block_hash.values()))
-            )
-        )
-        block_hash_to_info = {block_hash: (blue_score, timestamp) for block_hash, blue_score, timestamp in result}
+        transaction_id_to_block_hash = {}
+        block_hash_to_info = {}
+        for tx_id, block_hash, blue_score, timestamp in result:
+            transaction_id_to_block_hash[tx_id] = block_hash
+            if block_hash is not None:
+                block_hash_to_info[block_hash] = (blue_score, timestamp)
 
     responses = []
     for tx_id in transaction_ids:
