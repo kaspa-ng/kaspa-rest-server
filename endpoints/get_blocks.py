@@ -18,7 +18,6 @@ from helper.utils import add_cache_control
 from kaspad.KaspadRpcClient import kaspad_rpc_client
 from models.Block import Block
 from models.BlockParent import BlockParent
-from models.BlockTransaction import BlockTransaction
 from models.Transaction import Transaction
 
 from models.TransactionAcceptance import TransactionAcceptance
@@ -306,27 +305,9 @@ async def get_block_from_db(block_hash, include_transactions):
     async with async_session_blocks() as s:
         result = (await s.execute(block_join_query().where(Block.hash == block_hash).limit(1))).first()
 
-    if result:
-        block, is_chain_block, parents, children, transaction_ids = result
-    else:
-        async with async_session() as s:
-            result = (
-                await s.execute(
-                    select(
-                        BlockTransaction.transaction_id.label("transaction_id"),
-                        Transaction.block_time.label("block_time"),
-                    )
-                    .join(Transaction, BlockTransaction.transaction_id == Transaction.transaction_id)
-                    .where(BlockTransaction.block_hash == block_hash)
-                )
-            ).all()
-            if not result:
-                return None
-            block = Block(hash=block_hash, timestamp=result[0].block_time)
-            is_chain_block = None
-            parents = []
-            children = []
-            transaction_ids = [row.transaction_id for row in result]
+    if not result:
+        return None
+    block, is_chain_block, parents, children, transaction_ids = result
 
     transactions = (
         await get_transactions(block.hash, transaction_ids) if include_transactions and transaction_ids else None
@@ -410,9 +391,7 @@ def block_join_query():
         exists().where(TransactionAcceptance.block_hash == Block.hash),
         select(func.array_agg(BlockParent.parent_hash)).where(BlockParent.block_hash == Block.hash).scalar_subquery(),
         select(func.array_agg(BlockParent.block_hash)).where(BlockParent.parent_hash == Block.hash).scalar_subquery(),
-        select(func.array_agg(BlockTransaction.transaction_id))
-        .where(BlockTransaction.block_hash == Block.hash)
-        .scalar_subquery(),
+        Block.transaction_ids,
     )
 
 

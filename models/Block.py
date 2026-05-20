@@ -10,6 +10,7 @@ class Block(Base):
     __tablename__ = "blocks"
     hash = Column(HexColumn, primary_key=True)
     accepted_id_merkle_root = Column(HexColumn)
+    transaction_ids = Column(HexArrayColumn)
     merge_set_blues_hashes = Column(HexArrayColumn)
     merge_set_reds_hashes = Column(HexArrayColumn)
     selected_parent_hash = Column(HexColumn)

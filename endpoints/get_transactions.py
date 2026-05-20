@@ -18,7 +18,6 @@ from endpoints.get_blocks import get_block_from_kaspad
 from helper.PublicKeyType import get_public_key_type
 from helper.utils import add_cache_control
 from models.Block import Block
-from models.BlockTransaction import BlockTransaction
 from models.Transaction import Transaction
 from models.TransactionAcceptance import TransactionAcceptance
 from models.TransactionTypes import bytea_to_hex
@@ -146,10 +145,12 @@ async def get_transaction(
             if blockHash:
                 block_hashes = [blockHash]
             else:
-                block_hashes = await session_blocks.execute(
-                    select(BlockTransaction.block_hash).filter(BlockTransaction.transaction_id == transaction_id)
-                )
-                block_hashes = block_hashes.scalars().all()
+                block_hash = (
+                    await session.execute(
+                        select(Transaction.block_hash).filter(Transaction.transaction_id == transaction_id)
+                    )
+                ).scalar_one_or_none()
+                block_hashes = [block_hash] if block_hash else []
 
             if block_hashes:
                 transaction = await get_transaction_from_kaspad(block_hashes, transaction_id, inputs, outputs)
@@ -418,12 +419,15 @@ async def get_tx_blocks_from_db(fields, transaction_ids):
     if fields and "block_hash" not in fields:
         return tx_blocks_dict
 
-    async with async_session_blocks() as session_blocks:
-        tx_blocks = await session_blocks.execute(
-            select(BlockTransaction).filter(BlockTransaction.transaction_id.in_(transaction_ids))
+    async with async_session() as session:
+        rows = await session.execute(
+            select(Transaction.transaction_id, Transaction.block_hash).filter(
+                Transaction.transaction_id.in_(transaction_ids)
+            )
         )
-        for row in tx_blocks.scalars().all():
-            tx_blocks_dict[row.transaction_id].append(row.block_hash)
+        for tx_id, block_hash in rows.all():
+            if block_hash:
+                tx_blocks_dict[tx_id].append(block_hash)
         return tx_blocks_dict
 
 
