@@ -59,7 +59,7 @@ class KaspadThread(object):
     async def request(self, command, params=None, wait_for_response=True, timeout=120):
         if wait_for_response:
             try:
-                async for resp in self.stub.MessageStream(self.yield_cmd(command, params), timeout=120):
+                async for resp in self.stub.MessageStream(self.yield_cmd(command, params), timeout=timeout):
                     self.__queue.put_nowait("done")
                     return json_format.MessageToDict(resp, always_print_fields_with_no_presence=True)
             except grpc.aio._call.AioRpcError as e:
