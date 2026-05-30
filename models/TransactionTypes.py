@@ -30,6 +30,8 @@ class TransactionInput:
         self.previous_outpoint_script = bytea_to_hex(self.previous_outpoint_script)
         if self.previous_outpoint_script:
             self.previous_outpoint_address = to_address(ADDRESS_PREFIX, self.previous_outpoint_script)
+        elif self.previous_outpoint_address and not self.previous_outpoint_address.startswith(ADDRESS_PREFIX + ":"):
+            self.previous_outpoint_address = ADDRESS_PREFIX + ":" + self.previous_outpoint_address
 
 
 @dataclass
@@ -43,7 +45,7 @@ class TransactionOutput:
 
     def __post_init__(self):
         self.script_public_key = bytea_to_hex(self.script_public_key)
-        if self.script_public_key_address:
+        if self.script_public_key_address and not self.script_public_key_address.startswith(ADDRESS_PREFIX + ":"):
             self.script_public_key_address = ADDRESS_PREFIX + ":" + self.script_public_key_address
         if self.script_public_key:
             self.script_public_key_type = get_public_key_type(self.script_public_key)
