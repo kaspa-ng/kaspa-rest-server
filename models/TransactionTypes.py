@@ -29,7 +29,6 @@ class TransactionInput:
     def __post_init__(self):
         self.previous_outpoint_hash = bytea_to_hex(self.previous_outpoint_hash)
         self.signature_script = bytea_to_hex(self.signature_script)
-        self.sig_op_count = 0 if not self.sig_op_count else None  # Compability for existing clients expecting it
         self.previous_outpoint_script = bytea_to_hex(self.previous_outpoint_script)
         self.covenant_id = bytea_to_hex(self.covenant_id)
         if self.previous_outpoint_script:
