@@ -8,7 +8,7 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<=3.14" # Matches kaspa dep
 grpcio = "^1.63.0"
 grpcio-tools = "^1.63.0"
 fastapi = "^0.110.3"
@@ -23,7 +23,7 @@ psycopg2-binary = "^2.9.10"
 waitress = "^3.0.0"
 starlette = "^0.37.2"
 kaspa-script-address = "^0.0.1"
-kaspa = "^1.0.0"
+kaspa = "2.0.1"
 greenlet = "^3.2.4"
 sqlalchemy = "^2.0"
 psycopg = {version = "^3.2.10", extras = ["binary", "pool", "async"]}

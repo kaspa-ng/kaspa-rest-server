@@ -39,7 +39,8 @@ class TxOutput(BaseModel):
     script_public_key: str | None
     script_public_key_address: str | None
     script_public_key_type: str | None
-    accepting_block_hash: str | None
+    covenant_authorizing_input: int | None
+    covenant_id: str | None
 
     class Config:
         orm_mode = True
@@ -55,6 +56,8 @@ class TxInput(BaseModel):
     previous_outpoint_amount: int | None
     signature_script: str | None
     sig_op_count: str | None
+    compute_budget: int | None
+    covenant_id: str | None
 
     class Config:
         orm_mode = True
@@ -519,6 +522,7 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                             "previous_outpoint_index": tx_in["previousOutpoint"]["index"],
                             "signature_script": tx_in["signatureScript"],
                             "sig_op_count": tx_in["sigOpCount"],
+                            "compute_budget": tx_in["computeBudget"],
                         }
                         for tx_in_idx, tx_in in enumerate(tx["inputs"])
                     ]
@@ -532,6 +536,10 @@ def map_transaction_from_kaspad(block, transaction_id, block_hashes, include_inp
                             "script_public_key": tx_out["scriptPublicKey"]["scriptPublicKey"],
                             "script_public_key_address": tx_out["verboseData"]["scriptPublicKeyAddress"],
                             "script_public_key_type": tx_out["verboseData"]["scriptPublicKeyType"],
+                            "covenant_authorizing_input": tx_out["covenant"]["authorizingInput"]
+                            if tx_out["covenant"]
+                            else None,
+                            "covenant_id": tx_out["covenant"]["covenantId"] if tx_out["covenant"] else None,
                         }
                         for tx_out_idx, tx_out in enumerate(tx["outputs"])
                     ]

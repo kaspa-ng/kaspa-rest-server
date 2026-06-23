@@ -69,6 +69,7 @@ class BlockTxInputModel(BaseModel):
     signatureScript: str | None
     sigOpCount: int | None
     sequence: int | None
+    computeBudget: int | None
 
 
 class BlockTxOutputScriptPublicKeyModel(BaseModel):
@@ -81,10 +82,16 @@ class BlockTxOutputVerboseDataModel(BaseModel):
     scriptPublicKeyAddress: str | None
 
 
+class BlockTxOutputCovenantModel(BaseModel):
+    authorizingInput: int | None
+    covenantId: str | None
+
+
 class BlockTxOutputModel(BaseModel):
     amount: int | None
     scriptPublicKey: BlockTxOutputScriptPublicKeyModel | None
     verboseData: BlockTxOutputVerboseDataModel | None
+    covenant: BlockTxOutputCovenantModel | None
 
 
 class BlockTxVerboseDataModel(BaseModel):
@@ -424,6 +431,7 @@ async def get_transactions(blockId, transactionIds):
                         },
                         "signatureScript": tx_inp.signature_script,
                         "sigOpCount": tx_inp.sig_op_count,
+                        "computeBudget": tx_inp.compute_budget,
                     }
                     for tx_inp in (tx.inputs or [])
                 ],
@@ -435,6 +443,12 @@ async def get_transactions(blockId, transactionIds):
                             "scriptPublicKeyType": tx_out.script_public_key_type,
                             "scriptPublicKeyAddress": tx_out.script_public_key_address,
                         },
+                        "covenant": {
+                            "authorizingInput": tx_out.covenant_authorizing_input,
+                            "covenantId": tx_out.covenant_id,
+                        }
+                        if tx_out.covenant_id
+                        else None,
                     }
                     for tx_out in (tx.outputs or [])
                 ],
