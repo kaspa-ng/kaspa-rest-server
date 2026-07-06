@@ -20,7 +20,7 @@ from constants import (
     GENESIS_START_OF_MONTH_MS,
     CRESCENDO_BS,
 )
-from dbsession import async_session_blocks
+from dbsession import async_session
 from helper.difficulty_calculation import bits_to_difficulty
 from models.HashrateHistory import HashrateHistory
 from server import app
@@ -90,7 +90,7 @@ async def get_hashrate_history_for_day_or_month(
     if not sample_interval:
         raise HTTPException(status_code=400, detail=f"Invalid resolution, allowed: {list(resolution_map.keys())}")
 
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         result = await s.execute(
             select(HashrateHistory)
             .where(HashrateHistory.timestamp >= start_ms)
@@ -125,7 +125,7 @@ async def get_hashrate_history(
     if not sample_interval:
         raise HTTPException(status_code=400, detail=f"Invalid resolution, allowed: {list(resolution_map.keys())}")
 
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         result = await s.execute(select(HashrateHistory).order_by(HashrateHistory.daa_score.desc()))
         samples = result.scalars().all()
         return filter_samples(samples, sample_interval)

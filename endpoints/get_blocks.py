@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, exists, func
 
 from constants import BPS
-from dbsession import async_session, async_session_blocks
+from dbsession import async_session
 from endpoints.get_virtual_chain_blue_score import current_blue_score_data
 from helper.difficulty_calculation import bits_to_difficulty
 from helper.mining_address import get_miner_payload_from_block, retrieve_miner_info_from_payload
@@ -18,7 +18,6 @@ from helper.utils import add_cache_control
 from kaspad.KaspadRpcClient import kaspad_rpc_client
 from models.Block import Block
 from models.BlockParent import BlockParent
-from models.BlockTransaction import BlockTransaction
 from models.Transaction import Transaction
 
 from models.TransactionAcceptance import TransactionAcceptance
@@ -229,7 +228,7 @@ async def get_blocks_from_bluescore(
         return []
 
     if blue_score_gte is not None:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             blueScore = (
                 await s.execute(
                     select(Block.blue_score)
@@ -240,7 +239,7 @@ async def get_blocks_from_bluescore(
             ).scalar_one_or_none()
 
     if blue_score_lt is not None:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             blueScore = (
                 await s.execute(
                     select(Block.blue_score)
@@ -257,7 +256,7 @@ async def get_blocks_from_bluescore(
 
     # If the blue score is not older than 1 day, try looking up hashes and finding the blocks in kaspad first
     if current_blue_score_data["blue_score"] and (current_blue_score_data["blue_score"] - blueScore) / BPS < 86400:
-        async with async_session_blocks() as s:
+        async with async_session() as s:
             block_hashes = (await s.execute(select(Block.hash).where(Block.blue_score == blueScore))).scalars().all()
 
         if not block_hashes:
@@ -272,7 +271,7 @@ async def get_blocks_from_bluescore(
             return result
 
     # Block hashes not found in kaspad, look up blocks in the db instead
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         blocks = (await s.execute(block_join_query().where(Block.blue_score == blueScore))).all()
 
     result = []
@@ -310,30 +309,12 @@ async def get_block_from_kaspad(block_hash, include_transactions, include_color)
 
 
 async def get_block_from_db(block_hash, include_transactions):
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         result = (await s.execute(block_join_query().where(Block.hash == block_hash).limit(1))).first()
 
-    if result:
-        block, is_chain_block, parents, children, transaction_ids = result
-    else:
-        async with async_session() as s:
-            result = (
-                await s.execute(
-                    select(
-                        BlockTransaction.transaction_id.label("transaction_id"),
-                        Transaction.block_time.label("block_time"),
-                    )
-                    .join(Transaction, BlockTransaction.transaction_id == Transaction.transaction_id)
-                    .where(BlockTransaction.block_hash == block_hash)
-                )
-            ).all()
-            if not result:
-                return None
-            block = Block(hash=block_hash, timestamp=result[0].block_time)
-            is_chain_block = None
-            parents = []
-            children = []
-            transaction_ids = [row.transaction_id for row in result]
+    if not result:
+        return None
+    block, is_chain_block, parents, children, transaction_ids = result
 
     transactions = (
         await get_transactions(block.hash, transaction_ids) if include_transactions and transaction_ids else None
@@ -358,7 +339,7 @@ async def get_block_color_from_kaspad(block_hash):
 
 async def get_block_color_from_db(block):
     blockId = block["verboseData"]["hash"]
-    async with async_session_blocks() as s:
+    async with async_session() as s:
         blocks = (
             (
                 await s.execute(
@@ -417,9 +398,7 @@ def block_join_query():
         exists().where(TransactionAcceptance.block_hash == Block.hash),
         select(func.array_agg(BlockParent.parent_hash)).where(BlockParent.block_hash == Block.hash).scalar_subquery(),
         select(func.array_agg(BlockParent.block_hash)).where(BlockParent.parent_hash == Block.hash).scalar_subquery(),
-        select(func.array_agg(BlockTransaction.transaction_id))
-        .where(BlockTransaction.block_hash == Block.hash)
-        .scalar_subquery(),
+        Block.transaction_ids,
     )
 
 

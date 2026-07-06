@@ -28,6 +28,7 @@ class Transaction(Base):
     version = Column(SmallInteger)
     _inputs = Column("inputs", ARRAY(TransactionInputType))
     _outputs = Column("outputs", ARRAY(TransactionOutputType))
+    block_hash = Column(HexColumn)
 
     @hybrid_property
     def inputs(self):
