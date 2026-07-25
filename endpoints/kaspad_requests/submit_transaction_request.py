@@ -11,6 +11,7 @@ from kaspa import (
     TransactionOutput,
     ScriptPublicKey,
     Hash,
+    CovenantBinding,
 )
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
@@ -31,6 +32,7 @@ class SubmitTxInput(BaseModel):
     signatureScript: str
     sequence: int
     sigOpCount: int
+    computeBudget: int | None = 0
 
 
 class SubmitTxScriptPublicKey(BaseModel):
@@ -38,9 +40,15 @@ class SubmitTxScriptPublicKey(BaseModel):
     scriptPublicKey: str
 
 
+class SubmitTxCovenantBinding(BaseModel):
+    authorizingInput: int
+    covenantId: str
+
+
 class SubmitTxOutput(BaseModel):
     amount: int
     scriptPublicKey: SubmitTxScriptPublicKey
+    covenant: SubmitTxCovenantBinding | None = None
 
 
 class SubmitTxModel(BaseModel):
@@ -127,11 +135,18 @@ def convert_from_legacy_tx(transaction: SubmitTxModel) -> Transaction | None:
                 i.signatureScript,
                 i.sequence,
                 i.sigOpCount,
+                compute_budget=i.computeBudget or 0,
             )
             for i in transaction.inputs
         ],
         [
-            TransactionOutput(o.amount, ScriptPublicKey(o.scriptPublicKey.version, o.scriptPublicKey.scriptPublicKey))
+            TransactionOutput(
+                o.amount,
+                ScriptPublicKey(o.scriptPublicKey.version, o.scriptPublicKey.scriptPublicKey),
+                covenant_id=CovenantBinding(o.covenant.authorizingInput, o.covenant.covenantId)
+                if o.covenant
+                else None,
+            )
             for o in transaction.outputs
         ],
         transaction.lockTime or 0,
@@ -145,7 +160,7 @@ def convert_from_legacy_tx(transaction: SubmitTxModel) -> Transaction | None:
 """
 {
   "transaction": {
-    "version": 0,
+    "version": 1,
     "inputs": [
       {
         "previousOutpoint": {
@@ -154,7 +169,8 @@ def convert_from_legacy_tx(transaction: SubmitTxModel) -> Transaction | None:
         },
         "signatureScript": "4187173244180496d67a94dc78f3d3651bc645139b636a9c79a4f1d36fdcc718e88e9880eeb0eb208d0c110f31a306556457bc37e1044aeb3fdd303bd1a8c1b84601",
         "sequence": 0,
-        "sigOpCount": 1
+        "sigOpCount": 1,
+        "computeBudget": 0
       }
     ],
     "outputs": [
@@ -163,7 +179,8 @@ def convert_from_legacy_tx(transaction: SubmitTxModel) -> Transaction | None:
         "scriptPublicKey": {
           "scriptPublicKey": "20167f5647a0e88ed3ac7834b5de4a5f0e56a438bcb6c97186a2c935303290ef6fac",
           "version": 0
-        }
+        },
+        "covenant": null
       },
       {
         "amount": 183448,
