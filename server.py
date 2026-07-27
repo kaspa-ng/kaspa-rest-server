@@ -9,6 +9,7 @@ import fastapi.logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,6 +29,7 @@ _logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Kaspa REST-API server",
+    default_response_class=ORJSONResponse,
     description="REST-API server supporting block, tx and address search, using Kaspad and the indexer db.\n\n"
     "[https://github.com/kaspa-ng/kaspa-rest-server](https://github.com/kaspa-ng/kaspa-rest-server)",
     version=os.getenv("VERSION") or "dev",
@@ -46,7 +48,32 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class ConcurrencyLimitMiddleware:
+    """
+    Caps the number of in-flight HTTP requests per worker via a semaphore.
+    Set MAX_CONCURRENT_REQUESTS=0 (the default) to disable. Health, ping
+    and blue-score endpoints bypass the limit so monitoring stays responsive
+    even when the worker is at saturation.
+    """
+
+    BYPASS_PATHS = frozenset({"/info/health", "/info/virtual-chain-blue-score", "/ping"})
+
+    def __init__(self, app, max_concurrent: int = 0):
+        self.app = app
+        self._semaphore = asyncio.Semaphore(max_concurrent) if max_concurrent > 0 else None
+
+    async def __call__(self, scope, receive, send):
+        if self._semaphore is None or scope["type"] != "http" or scope.get("path", "") in self.BYPASS_PATHS:
+            await self.app(scope, receive, send)
+            return
+        async with self._semaphore:
+            await self.app(scope, receive, send)
+
+
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(
+    ConcurrencyLimitMiddleware, max_concurrent=int(os.getenv("MAX_CONCURRENT_REQUESTS", "0"))
+)
 app.add_middleware(LimitUploadSize, max_upload_size=200_000)  # ~1MB
 
 app.add_middleware(
