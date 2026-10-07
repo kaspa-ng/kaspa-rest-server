@@ -60,7 +60,6 @@ class UtxoCountResponse(BaseModel):
     openapi_extra={"strict_query_params": True},
 )
 async def get_utxos_for_address(
-    response: Response,
     kaspaAddress: str = Path(description=f"Kaspa address as string e.g. {ADDRESS_EXAMPLE}", regex=REGEX_KASPA_ADDRESS),
 ):
     """
@@ -76,7 +75,6 @@ async def get_utxos_for_address(
     over_limit = await _get_over_limit_addresses([kaspaAddress])
     if over_limit:
         _logger.info("UTXO count over limit for address: %s", kaspaAddress)
-        response.headers["Cache-Control"] = "public, max-age=60"
         return []
 
     utxos = await get_utxos([kaspaAddress])
@@ -85,7 +83,6 @@ async def get_utxos_for_address(
     if utxo_count > 1_000:
         _logger.info("High UTXO count for address %s: %d", kaspaAddress, utxo_count)
 
-    response.headers["Cache-Control"] = f"public, max-age={_utxo_count_to_ttl(utxo_count)}"
     return (utxo for utxo in utxos if utxo["address"] == kaspaAddress)
 
 
@@ -152,18 +149,8 @@ async def get_utxo_count_for_address(
     if utxo_count > 1_000:
         _logger.info("High UTXO count for address %s: %d", kaspaAddress, utxo_count)
 
-    response.headers["Cache-Control"] = f"public, max-age={_utxo_count_to_ttl(utxo_count)}"
+    response.headers["Cache-Control"] = "public, max-age=2"
     return {"count": utxo_count}
-
-
-def _utxo_count_to_ttl(count: int) -> int:
-    if count > 100_000:
-        return 3600
-    if count > 10_000:
-        return 600
-    if count > 1_000:
-        return 60
-    return 8
 
 
 async def get_utxos(addresses):
